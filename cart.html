@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giỏ hàng - TechLaptop</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <h1>TechLaptop</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Trang chủ</a></li>
+                    <li><a href="products.html">Sản phẩm</a></li>
+                    <li><a href="about.html">Giới thiệu</a></li>
+                    <li><a href="contact.html">Liên hệ</a></li>
+                    <li><a href="cart.html" class="active">Giỏ hàng</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="page-header">
+        <div class="container">
+            <h1>Giỏ Hàng</h1>
+        </div>
+    </section>
+
+    <section class="cart">
+        <div class="container">
+            <div class="cart-content">
+                <div class="cart-items">
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>Đơn giá</th>
+                                <th>Số lượng</th>
+                                <th>Thành tiền</th>
+                                <th>Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="cart-product">
+                                        <img src="images/laptop1.jpg" alt="Laptop Gaming Asus ROG">
+                                        <div class="cart-product-info">
+                                            <h3>Laptop Gaming Asus ROG Strix G15</h3>
+                                            <p class="product-specs">AMD Ryzen 7-5800H, 16GB, 512GB, RTX 3060</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="price">25.990.000₫</td>
+                                <td>
+                                    <div class="quantity-controls">
+                                        <button class="quantity-decrease">-</button>
+                                        <input type="number" value="1" min="1">
+                                        <button class="quantity-increase">+</button>
+                                    </div>
+                                </td>
+                                <td class="total">25.990.000₫</td>
+                                <td><button class="remove-btn">×</button></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="cart-product">
+                                        <img src="images/laptop3.jpg" alt="MacBook Air M2">
+                                        <div class="cart-product-info">
+                                            <h3>MacBook Air M2</h3>
+                                            <p class="product-specs">Apple M2, 8GB, 256GB SSD, 13.6" Liquid Retina</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="price">29.990.000₫</td>
+                                <td>
+                                    <div class="quantity-controls">
+                                        <button class="quantity-decrease">-</button>
+                                        <input type="number" value="1" min="1">
+                                        <button class="quantity-increase">+</button>
+                                    </div>
+                                </td>
+                                <td class="total">29.990.000₫</td>
+                                <td><button class="remove-btn">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="cart-actions">
+                    <div class="coupon">
+                        <input type="text" placeholder="Mã giảm giá">
+                        <button class="btn">Áp dụng</button>
+                    </div>
+                    <button class="btn update-cart">Cập nhật giỏ hàng</button>
+                </div>
+            </div>
+
+            <div class="cart-summary">
+                <h2>Tổng giỏ hàng</h2>
+                <div class="summary-row">
+                    <span>Tạm tính</span>
+                    <span>55.980.000₫</span>
+                </div>
+                <div class="summary-row">
+                    <span>Giảm giá</span>
+                    <span>-0₫</span>
+                </div>
+                <div class="summary-row">
+                    <span>Phí vận chuyển</span>
+                    <span>Miễn phí</span>
+                </div>
+                <div class="summary-total">
+                    <span>Tổng cộng</span>
+                    <span>55.980.000₫</span>
+                </div>
+                <button class="btn btn-checkout">Tiến hành thanh toán</button>
+                <div class="continue-shopping">
+                    <a href="products.html">&larr; Tiếp tục mua sắm</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="recommended-products">
+        <div class="container">
+            <h2 class="section-title">Sản phẩm đề xuất cho bạn</h2>
+            <div class="product-grid">
+                <div class="product-card">
+                    <img src="images/laptop4.jpg" alt="HP Spectre x360">
+                    <h3>HP Spectre x360 14</h3>
+                    <p class="specs">Intel Core i7-1165G7, 16GB, 1TB SSD, 14" 3K2K OLED Touch</p>
+                    <p class="price">27.990.000₫</p>
+                    <div class="card-buttons">
+                        <a href="product-detail.html?id=4" class="btn">Xem chi tiết</a>
+                        <a href="#" class="btn btn-cart">Thêm vào giỏ</a>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <img src="images/laptop6.jpg" alt="Acer Nitro 5">
+                    <h3>Acer Nitro 5 AN515-58</h3>
+                    <p class="specs">Intel Core i5-12500H, 8GB, 512GB SSD, RTX 3050, 15.6" FHD 144Hz</p>
+                    <p class="price">19.990.000₫</p>
+                    <div class="card-buttons">
+                        <a href="product-detail.html?id=6" class="btn">Xem chi tiết</a>
+                        <a href="#" class="btn btn-cart">Thêm vào giỏ</a>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <img src="images/laptop5.jpg" alt="Lenovo ThinkPad X1 Carbon">
+                    <h3>Lenovo ThinkPad X1 Carbon Gen 10</h3>
+                    <p class="specs">Intel Core i7-1260P, 16GB, 512GB SSD, 14" WUXGA IPS</p>
+                    <p class="price">31.990.000₫</p>
+                    <div class="card-buttons">
+                        <a href="product-detail.html?id=5" class="btn">Xem chi tiết</a>
+                        <a href="#" class="btn btn-cart">Thêm vào giỏ</a>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <img src="images/laptop7.jpg" alt="MSI GF63 Thin">
+                    <h3>MSI GF63 Thin</h3>
+                    <p class="specs">Intel Core i5-12450H, 8GB, 512GB SSD, RTX 3050, 15.6" FHD</p>
+                    <p class="price">18.490.000₫</p>
+                    <div class="card-buttons">
+                        <a href="product-detail.html?id=7" class="btn">Xem chi tiết</a>
+                        <a href="#" class="btn btn-cart">Thêm vào giỏ</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>TechLaptop</h3>
+                    <p>Cửa hàng laptop uy tín hàng đầu Việt Nam</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Liên hệ</h3>
+                    <p>Địa chỉ: 123 Đường Láng, Đống Đa, Hà Nội</p>
+                    <p>Điện thoại: 0123.456.789</p>
+                    <p>Email: cskh@techlaptop.vn</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Danh mục</h3>
+                    <ul>
+                        <li><a href="products.html?category=gaming">Laptop Gaming</a></li>
+                        <li><a href="products.html?category=business">Laptop Văn Phòng</a></li>
+                        <li><a href="products.html?category=macbook">MacBook</a></li>
+                        <li><a href="products.html?category=ultrabook">Ultrabook</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Hỗ trợ</h3>
+                    <ul>
+                        <li><a href="about.html">Về chúng tôi</a></li>
+                        <li><a href="contact.html">Liên hệ</a></li>
+                        <li><a href="policy.html">Chính sách bảo hành</a></li>
+                        <li><a href="shipping.html">Chính sách vận chuyển</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2023 TechLaptop. Tất cả quyền được bảo lưu.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html> 
