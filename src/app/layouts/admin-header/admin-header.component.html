@@ -1,0 +1,21 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between w-100 align-items-center">
+      <div>
+        <h1 class="admin-title">Admin Dashboard</h1>
+      </div>
+      
+      <div class="dropdown">
+        <button class="btn dropdown-toggle user-dropdown" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fas fa-user-circle me-2"></i>Admin
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <li><a class="dropdown-item" href="#">Hồ sơ</a></li>
+          <li><a class="dropdown-item" href="#">Cài đặt</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" (click)="logout()">Đăng xuất</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>

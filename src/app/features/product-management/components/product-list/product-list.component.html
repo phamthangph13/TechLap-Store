@@ -1,0 +1,82 @@
+<div class="product-list-container">
+  <div class="list-header">
+    <h1>Quản lý sản phẩm</h1>
+    <button class="add-btn" routerLink="/admin/product-management/new">+ Thêm sản phẩm</button>
+  </div>
+
+  <div *ngIf="loading" class="loading-indicator">
+    <span><i class="loading-icon"></i> Đang tải dữ liệu sản phẩm...</span>
+  </div>
+
+  <div *ngIf="error" class="error-message">
+    <span><i class="error-icon"></i> {{ error }}</span>
+  </div>
+
+  <div class="product-table-container" *ngIf="!loading && !error">
+    <div *ngIf="products.length === 0" class="no-products">
+      <p>Không có sản phẩm nào. Bấm "Thêm sản phẩm" để bắt đầu.</p>
+    </div>
+
+    <table class="product-table" *ngIf="products.length > 0">
+      <thead>
+        <tr>
+          <th>Hình ảnh</th>
+          <th>Danh mục</th>
+          <th>Tên sản phẩm</th>
+          <th>Thương hiệu</th>
+          <th>Model</th>
+          <th>Giá</th>
+          <th>Tồn kho</th>
+          <th>Trạng thái</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of products">
+          <td class="product-image-cell">
+            <div class="product-image">
+              <img [src]="getImageUrl(product.thumbnail || '')" alt="{{ product.name }}" />
+            </div>
+          </td>
+          <td class="category-cell">
+            <span class="category-badge" *ngIf="product.category_id">{{ getCategoryName(product.category_id) }}</span>
+            <span class="no-category" *ngIf="!product.category_id">Không có</span>
+          </td>
+          <td class="name-cell">{{ product.name }}</td>
+          <td>{{ product.brand }}</td>
+          <td>{{ product.model }}</td>
+          <td class="price-cell">
+            <div *ngIf="product.discount_percent > 0" class="discounted-price">
+              <span class="original-price">{{ getFormattedPrice(product.price) }}</span>
+              <span class="discount-badge">-{{ product.discount_percent }}%</span>
+              <span class="final-price">{{ getFormattedPrice(product.discount_price) }}</span>
+              <span class="saved-amount">Tiết kiệm {{ getFormattedPrice(getSavedAmount(product)) }}</span>
+            </div>
+            <div *ngIf="product.discount_percent === 0" class="regular-price">
+              {{ getFormattedPrice(product.price) }}
+            </div>
+          </td>
+          <td>{{ product.stock_quantity }}</td>
+          <td class="status-cell">
+            <span class="status-badge" [ngClass]="{
+              'available': product.status === 'available',
+              'sold-out': product.status === 'sold_out',
+              'discontinued': product.status === 'discontinued'
+            }">
+              {{ product.status === 'available' ? 'Còn hàng' : 
+                 product.status === 'sold_out' ? 'Hết hàng' : 'Ngừng kinh doanh' }}
+            </span>
+          </td>
+          <td class="actions-cell">
+            <button class="edit-btn" title="Chỉnh sửa" [routerLink]="['/admin/product-management/edit', product._id]">
+              <i class="edit-icon"></i>
+            </button>
+            <button class="delete-btn" title="Xóa" (click)="deleteProduct(product._id)">
+              <i class="delete-icon"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div> 

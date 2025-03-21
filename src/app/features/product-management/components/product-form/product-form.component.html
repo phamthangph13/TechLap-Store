@@ -1,0 +1,259 @@
+<div class="product-form-container">
+  <div *ngIf="loading" class="loading-indicator">
+    <span><i class="loading-icon"></i>Đang tải dữ liệu sản phẩm...</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    <span><i class="error-icon"></i>{{ errorMessage }}</span>
+  </div>
+
+  <form [formGroup]="productForm" (ngSubmit)="onSubmit()" *ngIf="!loading && !errorMessage">
+    <div class="form-header">
+      <h2>{{ isEditMode ? 'Chỉnh sửa' : 'Thêm mới' }} sản phẩm</h2>
+    </div>
+
+    <div class="form-sections-wrapper">
+      <!-- Cột trái: Thông tin cơ bản và thông số kỹ thuật -->
+      <div class="form-column-left">
+        <!-- Thông tin cơ bản -->
+        <div class="form-section section-basic">
+          <h3>Thông tin cơ bản</h3>
+          
+          <div class="form-group full-width">
+            <label for="name">Tên sản phẩm <span class="required-star">*</span></label>
+            <input type="text" id="name" formControlName="name" placeholder="VD: Laptop Dell XPS 15">
+            <div class="error-message" *ngIf="productForm.get('name')?.touched && productForm.get('name')?.errors?.['required']">
+              Vui lòng nhập tên sản phẩm
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="brand">Thương hiệu <span class="required-star">*</span></label>
+              <input type="text" id="brand" formControlName="brand" placeholder="VD: Dell">
+              <div class="error-message" *ngIf="productForm.get('brand')?.touched && productForm.get('brand')?.errors?.['required']">
+                Vui lòng nhập thương hiệu
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="model">Model <span class="required-star">*</span></label>
+              <input type="text" id="model" formControlName="model" placeholder="VD: XPS 15 9530">
+              <div class="error-message" *ngIf="productForm.get('model')?.touched && productForm.get('model')?.errors?.['required']">
+                Vui lòng nhập model
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="price">Giá gốc (VNĐ) <span class="required-star">*</span></label>
+              <input type="number" id="price" formControlName="price" min="0" placeholder="VD: 35000000">
+              <div class="formatted-price" *ngIf="productForm.get('price')?.value">
+                {{ formatPrice(productForm.get('price')?.value) }}
+              </div>
+              <div class="error-message" *ngIf="productForm.get('price')?.touched && productForm.get('price')?.errors?.['required']">
+                Vui lòng nhập giá
+              </div>
+              <div class="error-message" *ngIf="productForm.get('price')?.touched && productForm.get('price')?.errors?.['min']">
+                Giá phải là số dương
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="discount_percent">Phần trăm giảm giá <span class="required-star">*</span></label>
+              <input type="number" id="discount_percent" formControlName="discount_percent" min="0" max="100" placeholder="VD: 10">
+              <div class="error-message" *ngIf="productForm.get('discount_percent')?.touched && productForm.get('discount_percent')?.errors?.['required']">
+                Vui lòng nhập % giảm giá
+              </div>
+              <div class="error-message" *ngIf="productForm.get('discount_percent')?.touched && productForm.get('discount_percent')?.errors?.['min']">
+                Giảm giá tối thiểu là 0%
+              </div>
+              <div class="error-message" *ngIf="productForm.get('discount_percent')?.touched && productForm.get('discount_percent')?.errors?.['max']">
+                Giảm giá tối đa là 100%
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-row price-summary" *ngIf="productForm.get('price')?.value > 0">
+            <div class="form-group discount-price-container">
+              <label for="discount_price">Giá sau giảm</label>
+              <input type="text" id="discount_price" formControlName="discount_price" readonly>
+              <div class="formatted-price discount-price">
+                {{ formatPrice(autoCalculatedDiscount) }}
+              </div>
+            </div>
+            
+            <div class="form-group saved-amount-container" *ngIf="getSavedAmount() > 0">
+              <label>Tiết kiệm được</label>
+              <div class="saved-amount">
+                {{ formatPrice(getSavedAmount()) }}
+                <span class="save-percent">(Giảm {{ productForm.get('discount_percent')?.value }}%)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="stock_quantity">Số lượng tồn kho <span class="required-star">*</span></label>
+              <input type="number" id="stock_quantity" formControlName="stock_quantity" min="0">
+              <div class="error-message" *ngIf="productForm.get('stock_quantity')?.touched && productForm.get('stock_quantity')?.errors?.['required']">
+                Vui lòng nhập số lượng tồn kho
+              </div>
+              <div class="error-message" *ngIf="productForm.get('stock_quantity')?.touched && productForm.get('stock_quantity')?.errors?.['min']">
+                Số lượng tồn kho phải là số dương
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="status">Trạng thái</label>
+              <select id="status" formControlName="status">
+                <option value="available">Còn hàng</option>
+                <option value="sold_out">Hết hàng</option>
+                <option value="discontinued">Ngừng kinh doanh</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="category_id">Danh mục</label>
+            <select id="category_id" formControlName="category_id">
+              <option value="">Không có</option>
+              <option *ngFor="let category of categories" [value]="category._id">{{ category.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Thông số kỹ thuật -->
+        <div class="form-section section-specs" formGroupName="specs">
+          <h3>Thông số kỹ thuật</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="cpu">CPU <span class="required-star">*</span></label>
+              <input type="text" id="cpu" formControlName="cpu" placeholder="VD: Intel Core i7-13700H">
+              <div class="error-message" *ngIf="productForm.get('specs')?.get('cpu')?.touched && productForm.get('specs')?.get('cpu')?.errors?.['required']">
+                Vui lòng nhập thông tin CPU
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ram">RAM <span class="required-star">*</span></label>
+              <input type="text" id="ram" formControlName="ram" placeholder="VD: 16GB DDR5">
+              <div class="error-message" *ngIf="productForm.get('specs')?.get('ram')?.touched && productForm.get('specs')?.get('ram')?.errors?.['required']">
+                Vui lòng nhập thông tin RAM
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="storage">Ổ cứng <span class="required-star">*</span></label>
+              <input type="text" id="storage" formControlName="storage" placeholder="VD: 512GB NVMe SSD">
+              <div class="error-message" *ngIf="productForm.get('specs')?.get('storage')?.touched && productForm.get('specs')?.get('storage')?.errors?.['required']">
+                Vui lòng nhập thông tin ổ cứng
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="display">Màn hình <span class="required-star">*</span></label>
+              <input type="text" id="display" formControlName="display" placeholder="VD: 15.6 inch 4K OLED">
+              <div class="error-message" *ngIf="productForm.get('specs')?.get('display')?.touched && productForm.get('specs')?.get('display')?.errors?.['required']">
+                Vui lòng nhập thông tin màn hình
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="gpu">Card đồ họa <span class="required-star">*</span></label>
+              <input type="text" id="gpu" formControlName="gpu" placeholder="VD: NVIDIA RTX 4060 6GB">
+              <div class="error-message" *ngIf="productForm.get('specs')?.get('gpu')?.touched && productForm.get('specs')?.get('gpu')?.errors?.['required']">
+                Vui lòng nhập thông tin card đồ họa
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="battery">Pin <span class="required-star">*</span></label>
+              <input type="text" id="battery" formControlName="battery" placeholder="VD: 86Wh">
+              <div class="error-message" *ngIf="productForm.get('specs')?.get('battery')?.touched && productForm.get('specs')?.get('battery')?.errors?.['required']">
+                Vui lòng nhập thông tin pin
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="os">Hệ điều hành <span class="required-star">*</span></label>
+            <input type="text" id="os" formControlName="os" placeholder="VD: Windows 11 Pro">
+            <div class="error-message" *ngIf="productForm.get('specs')?.get('os')?.touched && productForm.get('specs')?.get('os')?.errors?.['required']">
+              Vui lòng nhập thông tin hệ điều hành
+            </div>
+          </div>
+
+          <div class="port-inputs">
+            <label>Cổng kết nối <span class="required-star">*</span></label>
+            <div class="port-input-row" *ngFor="let portControl of portsArray.controls; let i = index">
+              <div class="port-input-group">
+                <input type="text" [formControl]="$any(portControl)" placeholder="VD: USB-C">
+              </div>
+              <button type="button" class="remove-btn" (click)="removePort(i)" *ngIf="portsArray.length > 1"></button>
+            </div>
+            <div class="error-message" *ngIf="portsInvalid">
+              Vui lòng nhập ít nhất một cổng kết nối
+            </div>
+            <button type="button" class="add-port-btn" (click)="addPort()">Thêm cổng kết nối</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cột phải: Hình ảnh & video -->
+      <div class="form-column-right">
+        <div class="form-section section-media">
+          <h3>Hình ảnh & Video</h3>
+          
+          <div class="file-input-container">
+            <label for="thumbnail">Ảnh đại diện</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="thumbnail" accept="image/*" (change)="onThumbnailChange($event)" class="file-input">
+              <label for="thumbnail" class="file-select-btn">Chọn ảnh đại diện</label>
+            </div>
+            <div class="thumbnail-preview" *ngIf="thumbnailPreview">
+              <img [src]="thumbnailPreview" alt="Xem trước ảnh đại diện">
+            </div>
+          </div>
+
+          <div class="file-input-container">
+            <label for="images">Hình ảnh sản phẩm</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="images" accept="image/*" multiple (change)="onImagesChange($event)" class="file-input">
+              <label for="images" class="file-select-btn">Chọn hình ảnh sản phẩm</label>
+            </div>
+            <div class="image-previews" *ngIf="imagePreviewUrls.length">
+              <div class="image-preview" *ngFor="let imgUrl of imagePreviewUrls">
+                <img [src]="imgUrl" alt="Xem trước hình ảnh sản phẩm">
+              </div>
+            </div>
+          </div>
+
+          <div class="file-input-container">
+            <label for="videos">Video sản phẩm</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="videos" accept="video/*" multiple (change)="onVideosChange($event)" class="file-input">
+              <label for="videos" class="file-select-btn">Chọn video sản phẩm</label>
+            </div>
+            <div class="video-previews" *ngIf="videoPreviewUrls.length">
+              <div class="video-preview" *ngFor="let videoUrl of videoPreviewUrls">
+                <video [src]="videoUrl" controls></video>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="cancel-btn" routerLink="/admin/product-management">Hủy bỏ</button>
+      <button type="submit" class="submit-btn" [disabled]="submitting">{{ submitting ? 'Đang lưu...' : (isEditMode ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm') }}</button>
+    </div>
+  </form>
+</div> 
