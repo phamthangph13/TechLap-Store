@@ -9,11 +9,14 @@ export const apiInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Assuming API URLs start with '/api'
   if (req.url.startsWith('/api')) {
-    const apiUrl = environment.apiUrl || '';
-    const apiReq = req.clone({
-      url: `${apiUrl}${req.url}`
-    });
-    return next(apiReq);
+    const apiUrl = environment.apiUrl;
+    // Only prepend apiUrl if it's not empty (use proxy in dev)
+    if (apiUrl && apiUrl.length > 0) {
+      const apiReq = req.clone({
+        url: `${apiUrl}${req.url}`
+      });
+      return next(apiReq);
+    }
   }
 
   return next(req);

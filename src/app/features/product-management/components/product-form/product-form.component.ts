@@ -31,7 +31,7 @@ interface Product {
   stock_quantity: number;
   status: string;
   created_at?: string;
-  category_id?: string;
+  category_ids?: string[] | string;
   thumbnail?: string | null;
   images?: string[];
   videos?: string[];
@@ -83,7 +83,7 @@ export class ProductFormComponent implements OnInit {
       name: ['', [Validators.required]],
       brand: ['', [Validators.required]],
       model: ['', [Validators.required]],
-      price: [0, [Validators.required, Validators.min(0)]],
+      price: [1000000, [Validators.required, Validators.min(1000)]],
       discount_percent: [0, [Validators.required, Validators.min(0), Validators.max(100)]],
       discount_price: [{ value: 0, disabled: true }],
       specs: this.fb.group({
@@ -96,8 +96,8 @@ export class ProductFormComponent implements OnInit {
         os: ['', Validators.required],
         ports: this.fb.array([this.fb.control('')], [atLeastOnePortRequired])
       }),
-      stock_quantity: [0, [Validators.required, Validators.min(0)]],
-      category_id: [''],
+      stock_quantity: [10, [Validators.required, Validators.min(1)]],
+      category_ids: [''],
       status: ['available'],
       thumbnail: [null],
       images: [[]],
@@ -223,6 +223,16 @@ export class ProductFormComponent implements OnInit {
     // Replace the current empty FormArray with the new one
     (this.productForm.get('specs') as FormGroup).setControl('ports', portsArray);
 
+    // Determine category ID to display
+    let categoryId = '';
+    if (product.category_ids) {
+      if (Array.isArray(product.category_ids) && product.category_ids.length > 0) {
+        categoryId = product.category_ids[0];
+      } else if (typeof product.category_ids === 'string') {
+        categoryId = product.category_ids;
+      }
+    }
+
     // Patch other form values
     this.productForm.patchValue({
       name: product.name,
@@ -240,7 +250,7 @@ export class ProductFormComponent implements OnInit {
         os: product.specs.os
       },
       stock_quantity: product.stock_quantity,
-      category_id: product.category_id,
+      category_ids: categoryId,
       status: product.status || 'available'
     });
 
@@ -327,11 +337,76 @@ export class ProductFormComponent implements OnInit {
     // Prepare form data
     const formData = new FormData();
     const productData = this.collectFormData();
-    formData.append('product', JSON.stringify(productData));
+    
+    // Add product data as individual form fields
+    formData.append('name', productData.name);
+    formData.append('brand', productData.brand);
+    formData.append('model', productData.model);
+    formData.append('price', productData.price.toString());
+    formData.append('discount_percent', productData.discount_percent.toString());
+    // Don't send discount_price as it's calculated server-side
+    formData.append('stock_quantity', productData.stock_quantity.toString());
+    formData.append('status', productData.status);
+    
+    // Add specs fields
+    formData.append('specs.cpu', productData.specs.cpu);
+    formData.append('specs.ram', productData.specs.ram);
+    formData.append('specs.storage', productData.specs.storage);
+    formData.append('specs.display', productData.specs.display);
+    formData.append('specs.gpu', productData.specs.gpu);
+    formData.append('specs.battery', productData.specs.battery);
+    formData.append('specs.os', productData.specs.os);
+    
+    // Add ports as separate entries
+    productData.specs.ports.forEach((port: string) => {
+      formData.append('specs.ports', port);
+    });
+    
+    // Add category_ids as separate entries
+    if (productData.category_ids) {
+      // Convert to array format
+      let categoryArray: string[] = [];
+      
+      if (typeof productData.category_ids === 'string' && productData.category_ids.trim() !== '') {
+        // Single category ID
+        categoryArray = [productData.category_ids.trim()];
+      } else if (Array.isArray(productData.category_ids)) {
+        // Filter out any empty values
+        categoryArray = productData.category_ids
+          .filter((id: string) => typeof id === 'string' && id.trim() !== '')
+          .map((id: string) => id.trim());
+      }
+      
+      // Only proceed if we have valid categories
+      if (categoryArray.length > 0) {
+        console.log('Using category_ids:', categoryArray);
+        
+        // Append each category ID separately to the FormData
+        categoryArray.forEach(categoryId => {
+          formData.append('category_ids[]', categoryId);
+        });
+      }
+    }
     
     // Add media files to form data
     if (this.thumbnailFile) {
       formData.append('thumbnail', this.thumbnailFile);
+    }
+    
+    // Add image files if any
+    const imageInput = document.querySelector('#images') as HTMLInputElement;
+    if (imageInput && imageInput.files && imageInput.files.length > 0) {
+      for (let i = 0; i < imageInput.files.length; i++) {
+        formData.append('images', imageInput.files[i]);
+      }
+    }
+    
+    // Add video files if any
+    const videoInput = document.querySelector('#videos') as HTMLInputElement;
+    if (videoInput && videoInput.files && videoInput.files.length > 0) {
+      for (let i = 0; i < videoInput.files.length; i++) {
+        formData.append('videos', videoInput.files[i]);
+      }
     }
     
     // Send data to API
@@ -411,6 +486,13 @@ export class ProductFormComponent implements OnInit {
   
   // Phương thức tạo sản phẩm mới
   createProduct(formData: FormData): void {
+    console.log('Form data entries:');
+    formData.forEach((value, key) => {
+      console.log(`${key}: ${value}`);
+    });
+    
+    console.log('Raw form data:', this.productForm.getRawValue());
+
     this.productService.createProduct(formData).subscribe({
       next: (response: any) => {
         this.submitting = false;
@@ -418,8 +500,22 @@ export class ProductFormComponent implements OnInit {
       },
       error: (err: any) => {
         console.error('Lỗi khi tạo sản phẩm:', err);
+        if (err.error && err.error.errors) {
+          console.log('Validation errors:', JSON.stringify(err.error.errors, null, 2));
+          // Set error message to show validation problems
+          let validationErrors = '';
+          for (const key in err.error.errors) {
+            if (Object.prototype.hasOwnProperty.call(err.error.errors, key)) {
+              validationErrors += `${key}: ${err.error.errors[key]}\n`;
+            }
+          }
+          this.errorMessage = `Validation errors: ${validationErrors}`;
+        } else if (err.error && err.error.message) {
+          this.errorMessage = err.error.message;
+        } else {
+          this.errorMessage = 'Không thể tạo sản phẩm. Vui lòng thử lại.';
+        }
         this.submitting = false;
-        this.errorMessage = 'Không thể tạo sản phẩm. Vui lòng thử lại.';
       }
     });
   }
