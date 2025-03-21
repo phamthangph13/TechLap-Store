@@ -2,8 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { NgIf, NgFor, NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { environment } from '../../../../../environments/environment';
 import { FileService } from '../../../../../app/services/file.service';
+import { ProductSearchService, SearchParams, FilterOptions, PriceRange } from '../../services/product-search.service';
 
 interface Category {
   _id: string;
@@ -23,6 +25,16 @@ interface Product {
   created_at: string;
   thumbnail?: string;
   category_ids?: string[];
+  specs?: {
+    cpu?: string;
+    ram?: string;
+    storage?: string;
+    display?: string;
+    gpu?: string;
+    battery?: string;
+    os?: string;
+    ports?: string[];
+  };
 }
 
 @Component({
@@ -30,7 +42,7 @@ interface Product {
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.scss'],
   standalone: true,
-  imports: [NgIf, NgFor, NgClass, RouterLink, HttpClientModule]
+  imports: [NgIf, NgFor, NgClass, RouterLink, HttpClientModule, ReactiveFormsModule]
 })
 export class ProductListComponent implements OnInit {
   products: Product[] = [];
@@ -39,15 +51,146 @@ export class ProductListComponent implements OnInit {
   error = '';
   apiUrl = environment.apiUrl || '';
   imageUrlMap = new Map<string, string>();
+  
+  // Search related properties
+  searchForm: FormGroup;
+  isAdvancedSearch = false;
+  filterOptions: FilterOptions | null = null;
+  availableBrands: string[] = [];
+  priceRange: PriceRange = { min_price: 0, max_price: 100000000 };
+  totalProducts = 0;
+  currentPage = 1;
+  pageSize = 10;
+  totalPages = 1;
 
   constructor(
     private http: HttpClient,
-    private fileService: FileService
-  ) {}
+    private fileService: FileService,
+    private searchService: ProductSearchService,
+    private fb: FormBuilder
+  ) {
+    this.searchForm = this.fb.group({
+      query: [''],
+      min_price: [null],
+      max_price: [null],
+      min_discount: [null],
+      max_discount: [null],
+      brands: [[]],
+      category_ids: [[]],
+      status: [''],
+      cpu: [''],
+      ram: [''],
+      storage: [''],
+      gpu: [''],
+      sort_by: ['price'],
+      sort_order: ['asc']
+    });
+  }
 
   ngOnInit(): void {
     this.fetchCategories();
-    this.fetchProducts();
+    this.loadFilterOptions();
+    this.searchProducts();
+  }
+
+  toggleAdvancedSearch(): void {
+    this.isAdvancedSearch = !this.isAdvancedSearch;
+  }
+
+  loadFilterOptions(): void {
+    this.searchService.getBrands().subscribe({
+      next: (data) => {
+        this.availableBrands = data.brands;
+      },
+      error: (err) => {
+        console.error('Error loading brands:', err);
+      }
+    });
+
+    this.searchService.getPriceRange().subscribe({
+      next: (data) => {
+        this.priceRange = data;
+      },
+      error: (err) => {
+        console.error('Error loading price range:', err);
+      }
+    });
+
+    this.searchService.getFilterOptions().subscribe({
+      next: (data) => {
+        this.filterOptions = data;
+      },
+      error: (err) => {
+        console.error('Error loading filter options:', err);
+      }
+    });
+  }
+
+  onSearch(): void {
+    this.searchProducts();
+  }
+
+  clearFilters(): void {
+    this.searchForm.reset({
+      query: '',
+      min_price: null,
+      max_price: null,
+      min_discount: null,
+      max_discount: null,
+      brands: [],
+      category_ids: [],
+      status: '',
+      cpu: '',
+      ram: '',
+      storage: '',
+      gpu: '',
+      sort_by: 'price',
+      sort_order: 'asc'
+    });
+    this.searchProducts();
+  }
+
+  changePage(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.searchProducts();
+  }
+
+  searchProducts(): void {
+    this.loading = true;
+    
+    const searchParams: SearchParams = {
+      ...this.searchForm.value,
+      page: this.currentPage,
+      limit: this.pageSize
+    };
+
+    this.searchService.searchProducts(searchParams).subscribe({
+      next: (result) => {
+        console.log('Search results:', result);
+        this.products = result.products.map(item => {
+          const product: Product = {
+            ...item,
+            category_ids: Array.isArray(item.category_ids) ? item.category_ids :
+                        item.category_id ? [item.category_id] :
+                        item.categories ? item.categories :
+                        []
+          };
+          return product;
+        });
+        this.totalProducts = result.total;
+        this.totalPages = result.pages;
+        this.loading = false;
+        this.preloadImages();
+      },
+      error: (err) => {
+        this.error = 'Không thể tải danh sách sản phẩm. Vui lòng thử lại.';
+        console.error('Lỗi khi tải sản phẩm:', err);
+        this.loading = false;
+        // Fallback to regular product fetch if search endpoint fails
+        this.fetchProducts();
+      }
+    });
   }
 
   fetchProducts(): void {

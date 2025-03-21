@@ -4,6 +4,129 @@
     <button class="add-btn" routerLink="/admin/product-management/new">+ Thêm sản phẩm</button>
   </div>
 
+  <!-- Search Form -->
+  <div class="search-container">
+    <form [formGroup]="searchForm" (ngSubmit)="onSearch()">
+      <div class="basic-search">
+        <div class="search-field">
+          <input type="text" formControlName="query" placeholder="Tìm kiếm theo tên, thương hiệu, model...">
+          <button type="submit" class="search-btn">Tìm kiếm</button>
+        </div>
+        <button type="button" class="toggle-advanced" (click)="toggleAdvancedSearch()">
+          {{ isAdvancedSearch ? 'Rút gọn' : 'Tìm kiếm nâng cao' }}
+        </button>
+      </div>
+
+      <div class="advanced-search" *ngIf="isAdvancedSearch">
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>Giá</label>
+            <div class="price-range">
+              <input type="number" formControlName="min_price" placeholder="Từ">
+              <span>-</span>
+              <input type="number" formControlName="max_price" placeholder="Đến">
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label>Giảm giá</label>
+            <div class="discount-range">
+              <input type="number" formControlName="min_discount" placeholder="Từ %">
+              <span>-</span>
+              <input type="number" formControlName="max_discount" placeholder="Đến %">
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label>Trạng thái</label>
+            <select formControlName="status">
+              <option value="">Tất cả</option>
+              <option *ngFor="let status of filterOptions?.status || []" [value]="status">
+                {{ status === 'available' ? 'Còn hàng' : 
+                   status === 'sold_out' ? 'Hết hàng' : 'Ngừng kinh doanh' }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>Thương hiệu</label>
+            <select formControlName="brands" multiple>
+              <option *ngFor="let brand of availableBrands" [value]="brand">{{ brand }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Danh mục</label>
+            <select formControlName="category_ids" multiple>
+              <option *ngFor="let category of categories" [value]="category._id">{{ category.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>CPU</label>
+            <select formControlName="cpu">
+              <option value="">Tất cả</option>
+              <option *ngFor="let cpu of filterOptions?.specs?.cpu || []" [value]="cpu">{{ cpu }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>RAM</label>
+            <select formControlName="ram">
+              <option value="">Tất cả</option>
+              <option *ngFor="let ram of filterOptions?.specs?.ram || []" [value]="ram">{{ ram }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Storage</label>
+            <select formControlName="storage">
+              <option value="">Tất cả</option>
+              <option *ngFor="let storage of filterOptions?.specs?.storage || []" [value]="storage">{{ storage }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>GPU</label>
+            <select formControlName="gpu">
+              <option value="">Tất cả</option>
+              <option *ngFor="let gpu of filterOptions?.specs?.gpu || []" [value]="gpu">{{ gpu }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>Sắp xếp theo</label>
+            <select formControlName="sort_by">
+              <option value="price">Giá</option>
+              <option value="discount_price">Giá sau giảm</option>
+              <option value="discount_percent">Phần trăm giảm</option>
+              <option value="created_at">Ngày tạo</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Thứ tự</label>
+            <select formControlName="sort_order">
+              <option value="asc">Tăng dần</option>
+              <option value="desc">Giảm dần</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <button type="button" class="clear-btn" (click)="clearFilters()">Xóa bộ lọc</button>
+          <button type="submit" class="apply-btn">Áp dụng</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
   <div *ngIf="loading" class="loading-indicator">
     <span><i class="loading-icon"></i> Đang tải dữ liệu sản phẩm...</span>
   </div>
@@ -82,5 +205,16 @@
         </tr>
       </tbody>
     </table>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)" class="page-btn prev">
+        &lt; Trước
+      </button>
+      <span class="page-info">Trang {{ currentPage }} / {{ totalPages }}</span>
+      <button [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)" class="page-btn next">
+        Sau &gt;
+      </button>
+    </div>
   </div>
 </div> 
