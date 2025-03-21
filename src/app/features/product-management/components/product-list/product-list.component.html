@@ -39,8 +39,12 @@
             </div>
           </td>
           <td class="category-cell">
-            <span class="category-badge" *ngIf="product.category_id">{{ getCategoryName(product.category_id) }}</span>
-            <span class="no-category" *ngIf="!product.category_id">Không có</span>
+            <div class="category-badges">
+              <span class="category-badge" *ngFor="let categoryId of product.category_ids">
+                {{ getCategoryName(categoryId) }}
+              </span>
+              <span class="no-category" *ngIf="!product.category_ids || product.category_ids.length === 0">Không có</span>
+            </div>
           </td>
           <td class="name-cell">{{ product.name }}</td>
           <td>{{ product.brand }}</td>

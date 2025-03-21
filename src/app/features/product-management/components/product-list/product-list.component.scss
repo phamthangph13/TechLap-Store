@@ -140,13 +140,17 @@
     }
     
     .category-cell {
-      white-space: nowrap;
+      .category-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
       
       .category-badge {
         display: inline-block;
-        padding: 4px 10px;
-        background-color: #ebf8ff;
-        color: #2b6cb0;
+        padding: 2px 8px;
+        background-color: #e6f6ff;
+        color: #0072ce;
         border-radius: 20px;
         font-size: 12px;
         font-weight: 500;

@@ -22,7 +22,7 @@ interface Product {
   status: string;
   created_at: string;
   thumbnail?: string;
-  category_id?: string;
+  category_ids?: string[];
 }
 
 @Component({
@@ -52,24 +52,33 @@ export class ProductListComponent implements OnInit {
 
   fetchProducts(): void {
     this.loading = true;
-    this.http.get<Product[]>('/api/products')
+    this.http.get<any[]>('/api/products')
       .subscribe({
         next: (data) => {
-          this.products = data;
-          this.loading = false;
+          console.log('Dữ liệu sản phẩm từ API:', data);
           
-          // Tải trước và kiểm tra các URL hình ảnh
+          // Xử lý dữ liệu trả về để đảm bảo category_ids đúng định dạng
+          this.products = data.map(item => {
+            // Tạo đối tượng Product từ dữ liệu API
+            const product: Product = {
+              ...item,
+              // Đảm bảo category_ids luôn là mảng, kiểm tra các khả năng khác nhau
+              category_ids: Array.isArray(item.category_ids) ? item.category_ids :
+                            item.category_id ? [item.category_id] :
+                            item.categories ? item.categories :
+                            []
+            };
+            
+            console.log('Sản phẩm sau xử lý:', product.name, 'với category_ids:', product.category_ids);
+            return product;
+          });
+          
+          this.loading = false;
           this.preloadImages();
         },
         error: (err) => {
-          this.error = 'Failed to load products. Please try again.';
-          console.error('Error fetching products:', err);
-          // If you're testing with a mock server that isn't set up yet,
-          // you can display mock data for development purposes
-          if (err.status === 404 || err.status === 400) {
-            this.products = this.getMockProducts();
-            this.error = 'Using mock data (API not available)';
-          }
+          this.error = 'Không thể tải danh sách sản phẩm. Vui lòng thử lại.';
+          console.error('Lỗi khi tải sản phẩm:', err);
           this.loading = false;
         }
       });
@@ -89,17 +98,15 @@ export class ProductListComponent implements OnInit {
   fetchCategories(): void {
     this.http.get<Category[]>('/api/categories').subscribe({
       next: (data) => {
+        console.log('Danh mục từ API:', data);
         this.categories = data;
       },
       error: (err) => {
-        console.error('Error fetching categories:', err);
-        // Mock categories for development
+        console.error('Lỗi khi tải danh mục:', err);
+        // Nếu không thể kết nối đến API, vẫn dùng ID thực tế
         this.categories = [
-          { _id: 'laptop', name: 'Laptops' },
-          { _id: 'desktop', name: 'Desktops' },
-          { _id: 'tablet', name: 'Tablets' },
-          { _id: 'mobile', name: 'Mobile Phones' },
-          { _id: 'accessories', name: 'Accessories' }
+          { _id: '67dda5f32938c7d62376cac2', name: 'Laptop Văn phòng' },
+          { _id: '67ddc833f56fae9451fdc8cb', name: 'Laptop Gaming' }
         ];
       }
     });
@@ -119,8 +126,19 @@ export class ProductListComponent implements OnInit {
   }
 
   getCategoryName(categoryId: string): string {
+    if (!categoryId) return 'N/A';
+    
+    // Tìm danh mục trong danh sách categories
     const category = this.categories.find(c => c._id === categoryId);
-    return category ? category.name : 'Unknown';
+    
+    // Nếu tìm thấy thì trả về tên danh mục
+    if (category) {
+      return category.name;
+    }
+    
+    // Nếu không tìm thấy thì hiển thị một phần ID để dễ debug
+    const shortId = categoryId.length > 8 ? categoryId.substring(0, 8) + '...' : categoryId;
+    return `[${shortId}]`;
   }
 
   getSavedAmount(product: Product): number {
@@ -134,40 +152,6 @@ export class ProductListComponent implements OnInit {
       currency: 'VND',
       maximumFractionDigits: 0
     }).format(price);
-  }
-
-  // Mock data for development purposes when API is not available
-  private getMockProducts(): Product[] {
-    return [
-      {
-        _id: '1',
-        name: 'Laptop Dell XPS 15',
-        brand: 'Dell',
-        model: 'XPS 15 9530',
-        price: 35000000,
-        discount_percent: 10,
-        discount_price: 31500000,
-        stock_quantity: 50,
-        status: 'available',
-        created_at: new Date().toISOString(),
-        thumbnail: '', // 'https://placehold.co/200x200?text=Dell+XPS',
-        category_id: 'laptop'
-      },
-      {
-        _id: '2',
-        name: 'Laptop MacBook Pro 16',
-        brand: 'Apple',
-        model: 'MacBook Pro 16 M3',
-        price: 45000000,
-        discount_percent: 5,
-        discount_price: 42750000,
-        stock_quantity: 20,
-        status: 'available',
-        created_at: new Date().toISOString(),
-        thumbnail: '', // 'https://placehold.co/200x200?text=MacBook+Pro',
-        category_id: 'laptop'
-      }
-    ];
   }
 
   deleteProduct(id: string): void {

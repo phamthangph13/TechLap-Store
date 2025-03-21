@@ -3,6 +3,12 @@
 ## Overview
 This document provides comprehensive information about the Product Management API endpoints in the system. The API allows for creating, retrieving, updating, and deleting product information, including file uploads for product media.
 
+## Technical Implementation Notes
+- All API endpoints use JSON for data exchange, except for file upload operations
+- File uploads are handled using `multipart/form-data` format
+- MongoDB ObjectIds are automatically converted to strings in responses
+- Dates are returned in ISO 8601 format (e.g., "2023-03-21T08:30:00.000Z")
+
 ## Base URL
 All API endpoints are accessible under: `/api/products`
 
@@ -437,4 +443,9 @@ The API returns appropriate HTTP status codes and error messages for different s
 
 4. **Discount Price Calculation**:
    - The discount_price field is automatically calculated based on price and discount_percent
-   - Formula: discount_price = price - (price * discount_percent / 100) 
+   - Formula: discount_price = price - (price * discount_percent / 100)
+
+5. **MongoDB ObjectId Handling**:
+   - All MongoDB ObjectId values (like _id, category_ids, and file IDs) are automatically serialized to string format in JSON responses
+   - When sending ObjectId values in requests (like category_ids), you should provide the 24-character hexadecimal string format
+   - Example: "6600a1c3b6f4a2d4e8f3b131" 
