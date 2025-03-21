@@ -163,12 +163,60 @@
       }
     }
     
+    .variants-cell {
+      font-size: 0.9rem;
+      
+      .variant-info {
+        margin-bottom: 8px;
+        
+        .variant-count {
+          background-color: #e8f4fd;
+          color: #0072ce;
+          padding: 3px 8px;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          display: inline-block;
+        }
+      }
+      
+      .colors-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        
+        .color-count {
+          color: #666;
+          font-size: 0.85rem;
+          margin-bottom: 4px;
+        }
+        
+        .color-preview {
+          display: flex;
+          gap: 4px;
+          
+          .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+          }
+        }
+      }
+    }
+    
     .name-cell {
-      max-width: 220px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-weight: 500;
+      max-width: 250px;
+      
+      .short-description {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
     
     .price-cell {

@@ -214,7 +214,7 @@
         </div>
       </div>
 
-      <!-- Cột phải: Hình ảnh & video -->
+      <!-- Cột phải: Hình ảnh & Video -->
       <div class="form-column-right">
         <div class="form-section section-media">
           <h3>Hình ảnh & Video</h3>
@@ -225,7 +225,10 @@
               <input type="file" id="thumbnail" accept="image/*" (change)="onThumbnailChange($event)" class="file-input">
               <label for="thumbnail" class="file-select-btn">Chọn ảnh đại diện</label>
             </div>
-            <div class="thumbnail-preview" *ngIf="thumbnailPreview">
+            <div class="thumbnail-preview" *ngIf="isEditMode && productForm.get('thumbnail')?.value">
+              <img [src]="productService.getProductFileUrl(productForm.get('thumbnail')?.value)" (error)="handleImageError($event)" alt="Product Thumbnail">
+            </div>
+            <div class="thumbnail-preview" *ngIf="!isEditMode && thumbnailPreview">
               <img [src]="thumbnailPreview" alt="Xem trước ảnh đại diện">
             </div>
           </div>
@@ -236,8 +239,13 @@
               <input type="file" id="images" accept="image/*" multiple (change)="onImagesChange($event)" class="file-input">
               <label for="images" class="file-select-btn">Chọn hình ảnh sản phẩm</label>
             </div>
-            <div class="image-previews" *ngIf="imagePreviewUrls.length">
-              <div class="image-preview" *ngFor="let imgUrl of imagePreviewUrls">
+            <div class="image-container" *ngIf="isEditMode && productForm.get('images')?.value?.length">
+              <div *ngFor="let imageId of productForm.get('images')?.value" class="gallery-item">
+                <img [src]="productService.getProductFileUrl(imageId)" (error)="handleImageError($event)" alt="Product Image">
+              </div>
+            </div>
+            <div class="image-container" *ngIf="!isEditMode && imagePreviewUrls.length">
+              <div *ngFor="let imgUrl of imagePreviewUrls" class="gallery-item">
                 <img [src]="imgUrl" alt="Xem trước hình ảnh sản phẩm">
               </div>
             </div>
@@ -249,19 +257,200 @@
               <input type="file" id="videos" accept="video/*" multiple (change)="onVideosChange($event)" class="file-input">
               <label for="videos" class="file-select-btn">Chọn video sản phẩm</label>
             </div>
-            <div class="video-previews" *ngIf="videoPreviewUrls.length">
-              <div class="video-preview" *ngFor="let videoUrl of videoPreviewUrls">
-                <video [src]="videoUrl" controls></video>
+            <div class="video-container" *ngIf="isEditMode && productForm.get('videos')?.value?.length">
+              <div *ngFor="let videoId of productForm.get('videos')?.value" class="video-item">
+                <video controls width="320" preload="metadata" (error)="handleVideoError($event)">
+                  <source [src]="productService.getProductFileUrl(videoId)" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
+            <div class="video-container" *ngIf="!isEditMode && videoPreviewUrls.length">
+              <div *ngFor="let videoUrl of videoPreviewUrls" class="video-item">
+                <video controls width="320" *ngIf="isVideoFile(videoUrl)">
+                  <source [src]="videoUrl" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+                <div class="video-placeholder" *ngIf="!isVideoFile(videoUrl)">{{videoUrl}}</div>
               </div>
             </div>
           </div>
         </div>
+        
+        <!-- Mô tả ngắn -->
+        <div class="form-section section-short-description">
+          <h3>Mô tả ngắn</h3>
+          <div class="form-group full-width">
+            <textarea formControlName="short_description" placeholder="Nhập mô tả ngắn gọn về sản phẩm" rows="4"></textarea>
+          </div>
+        </div>
+        
+        <!-- Điểm nổi bật -->
+        <div class="form-section section-highlights">
+          <h3>Điểm nổi bật</h3>
+          <div class="highlights-container">
+            <div class="highlight-item" *ngFor="let highlightControl of highlightsArray.controls; let i = index">
+              <div class="form-group full-width">
+                <input type="text" [formControl]="$any(highlightControl)" placeholder="Điểm nổi bật">
+              </div>
+              <button type="button" class="remove-btn" (click)="removeHighlight(i)"></button>
+            </div>
+            <button type="button" class="add-highlight-btn" (click)="addHighlight()">Thêm điểm nổi bật</button>
+          </div>
+        </div>
+        
+        <!-- Thông tin sản phẩm -->
+        <div class="form-section section-product-info">
+          <h3>Thông tin sản phẩm</h3>
+          <div class="product-info-container">
+            <div class="product-info-item" *ngFor="let infoControl of productInfoArray.controls; let i = index" [formGroup]="$any(infoControl)">
+              <div class="form-group">
+                <input type="text" formControlName="title" placeholder="Tiêu đề (VD: Bảo hành)">
+              </div>
+              <div class="form-group">
+                <textarea formControlName="content" placeholder="Nội dung" rows="2"></textarea>
+              </div>
+              <button type="button" class="remove-btn" (click)="removeProductInfo(i)"></button>
+            </div>
+            <button type="button" class="add-product-info-btn" (click)="addProductInfo()">Thêm thông tin sản phẩm</button>
+          </div>
+        </div>
       </div>
     </div>
-
+    
+    <!-- Các phiên bản và màu sắc -->
+    <div class="additional-sections">
+      <!-- Phiên bản (Variant Specs) -->
+      <div class="form-section section-variants">
+        <h3>Phiên bản sản phẩm</h3>
+        <div class="variants-container">
+          <div class="variant-card" *ngFor="let variantControl of variantSpecsArray.controls; let variantIndex = index" [formGroup]="$any(variantControl)">
+            <div class="variant-header">
+              <div class="form-group">
+                <label>Tên phiên bản <span class="required-star">*</span></label>
+                <input type="text" formControlName="name" placeholder="VD: High Performance">
+              </div>
+              <button type="button" class="remove-variant-btn" (click)="removeVariantSpec(variantIndex)"></button>
+            </div>
+            
+            <div class="variant-content" formGroupName="specs">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>CPU <span class="required-star">*</span></label>
+                  <input type="text" formControlName="cpu" placeholder="VD: Intel Core i9-13900H">
+                </div>
+                <div class="form-group">
+                  <label>RAM <span class="required-star">*</span></label>
+                  <input type="text" formControlName="ram" placeholder="VD: 32GB DDR5">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Ổ cứng <span class="required-star">*</span></label>
+                  <input type="text" formControlName="storage" placeholder="VD: 1TB NVMe SSD">
+                </div>
+                <div class="form-group">
+                  <label>Màn hình <span class="required-star">*</span></label>
+                  <input type="text" formControlName="display" placeholder="VD: 15.6 inch 4K OLED Touch">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Card đồ họa <span class="required-star">*</span></label>
+                  <input type="text" formControlName="gpu" placeholder="VD: NVIDIA RTX 4070 8GB">
+                </div>
+                <div class="form-group">
+                  <label>Pin <span class="required-star">*</span></label>
+                  <input type="text" formControlName="battery" placeholder="VD: 86Wh">
+                </div>
+              </div>
+              
+              <div class="form-group full-width">
+                <label>Hệ điều hành <span class="required-star">*</span></label>
+                <input type="text" formControlName="os" placeholder="VD: Windows 11 Pro">
+              </div>
+              
+              <div class="port-inputs">
+                <label>Cổng kết nối <span class="required-star">*</span></label>
+                <div class="port-input-row" *ngFor="let portControl of getVariantSpecPortsArray(variantIndex).controls; let portIndex = index">
+                  <div class="port-input-group">
+                    <input type="text" [formControl]="$any(portControl)" placeholder="VD: USB-C">
+                  </div>
+                  <button type="button" class="remove-btn" (click)="removeVariantPort(variantIndex, portIndex)" *ngIf="getVariantSpecPortsArray(variantIndex).length > 1"></button>
+                </div>
+                <button type="button" class="add-port-btn" (click)="addVariantPort(variantIndex)">Thêm cổng kết nối</button>
+              </div>
+            </div>
+            
+            <div class="variant-pricing">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Giá (VNĐ) <span class="required-star">*</span></label>
+                  <input type="number" formControlName="price" min="1000" placeholder="VD: 45000000">
+                </div>
+                <div class="form-group">
+                  <label>Phần trăm giảm giá <span class="required-star">*</span></label>
+                  <input type="number" formControlName="discount_percent" min="0" max="100" placeholder="VD: 5">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <button type="button" class="add-variant-btn" (click)="addVariantSpec()">Thêm phiên bản</button>
+        </div>
+      </div>
+      
+      <!-- Màu sắc (Colors) -->
+      <div class="form-section section-colors">
+        <h3>Màu sắc</h3>
+        <div class="colors-container">
+          <div class="color-card" *ngFor="let colorControl of colorsArray.controls; let colorIndex = index" [formGroup]="$any(colorControl)">
+            <div class="color-header">
+              <div class="form-group">
+                <label>Tên màu <span class="required-star">*</span></label>
+                <input type="text" formControlName="name" placeholder="VD: Space Gray">
+              </div>
+              <button type="button" class="remove-color-btn" (click)="removeColor(colorIndex)"></button>
+            </div>
+            
+            <div class="color-content">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Mã màu <span class="required-star">*</span></label>
+                  <input type="color" formControlName="code">
+                </div>
+                <div class="form-group">
+                  <label>Điều chỉnh giá (VNĐ)</label>
+                  <input type="number" formControlName="price_adjustment" placeholder="VD: 500000">
+                </div>
+                <div class="form-group">
+                  <label>Điều chỉnh giảm giá (%)</label>
+                  <input type="number" formControlName="discount_adjustment" placeholder="VD: 5">
+                </div>
+              </div>
+              
+              <!-- Image upload for colors would go here, but is more complex -->
+              <div class="form-group">
+                <label>Hình ảnh màu sắc</label>
+                <p class="helper-text">Hình ảnh màu sắc được quản lý qua API riêng</p>
+              </div>
+            </div>
+          </div>
+          
+          <button type="button" class="add-color-btn" (click)="addColor()">Thêm màu sắc</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Form actions -->
     <div class="form-actions">
-      <button type="button" class="cancel-btn" routerLink="/admin/product-management">Hủy bỏ</button>
-      <button type="submit" class="submit-btn" [disabled]="submitting">{{ submitting ? 'Đang lưu...' : (isEditMode ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm') }}</button>
+      <button type="button" class="btn-cancel" routerLink="/admin/product-management">Hủy</button>
+      <button type="submit" class="btn-submit" [disabled]="submitting">
+        <span *ngIf="!submitting">{{ isEditMode ? 'Cập nhật' : 'Thêm mới' }}</span>
+        <span *ngIf="submitting"><i class="loading-icon"></i> Đang xử lý...</span>
+      </button>
     </div>
   </form>
 </div> 

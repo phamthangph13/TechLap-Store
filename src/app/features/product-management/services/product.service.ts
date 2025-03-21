@@ -47,6 +47,24 @@ export class ProductService {
       );
   }
 
+  // Helper method to get file URL
+  getProductFileUrl(fileId: string): string {
+    if (!fileId || fileId === 'undefined' || fileId === 'null') {
+      // Use a data URI for a small gray placeholder image
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bMQ0AIAwAwQJ+ZuFnBt5hYeJxN3DptGa27ae7I/Y+DnCDIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZk/aCYQAWAEEFwAAAAASUVORK5CYII=';
+    }
+    return `/api/products/files/${fileId}`;
+  }
+
+  // Helper method to get file URL with domain
+  getProductFileUrlWithDomain(fileId: string): string {
+    if (!fileId || fileId === 'undefined' || fileId === 'null') {
+      // Use a data URI for a small gray placeholder image
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bMQ0AIAwAwQJ+ZuFnBt5hYeJxN3DptGa27ae7I/Y+DnCDIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZk/aCYQAWAEEFwAAAAASUVORK5CYII=';
+    }
+    return `${window.location.origin}/api/products/files/${fileId}`;
+  }
+
   private handleError(error: HttpErrorResponse) {
     console.error('API Error:', error);
     

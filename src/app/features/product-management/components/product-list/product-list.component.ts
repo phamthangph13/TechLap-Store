@@ -12,6 +12,35 @@ interface Category {
   name: string;
 }
 
+interface ProductInfo {
+  title: string;
+  content: string;
+}
+
+interface VariantSpec {
+  name: string;
+  specs: {
+    cpu: string;
+    ram: string;
+    storage: string;
+    display: string;
+    gpu: string;
+    battery: string;
+    os: string;
+    ports: string[];
+  };
+  price: number;
+  discount_percent: number;
+}
+
+interface Color {
+  name: string;
+  code: string;
+  price_adjustment: number;
+  discount_adjustment: number;
+  images: string[];
+}
+
 interface Product {
   _id: string;
   name: string;
@@ -35,6 +64,11 @@ interface Product {
     os?: string;
     ports?: string[];
   };
+  variant_specs?: VariantSpec[];
+  colors?: Color[];
+  product_info?: ProductInfo[];
+  highlights?: string[];
+  short_description?: string;
 }
 
 @Component({
@@ -257,15 +291,31 @@ export class ProductListComponent implements OnInit {
 
   // Helper methods for template
   getImageUrl(imageId: string): string {
-    if (!imageId) return 'assets/images/no-image.png';
+    if (!imageId || imageId === 'undefined' || imageId === 'null') {
+      return 'assets/images/no-image.png';
+    }
     
     // Sử dụng URL từ cache nếu có
     if (this.imageUrlMap.has(imageId)) {
       return this.imageUrlMap.get(imageId)!;
     }
     
-    // Nếu không có trong cache, sử dụng URL endpoint trực tiếp (thay vì Observable)
-    return `/api/products/files/${imageId}`;
+    // Nếu không có trong cache, sử dụng URL endpoint trực tiếp
+    const url = `/api/products/files/${imageId}`;
+    this.imageUrlMap.set(imageId, url);
+    
+    // Cài đặt một handler cho các hình ảnh bị lỗi
+    setTimeout(() => {
+      const images = document.querySelectorAll(`img[src="${url}"]`);
+      images.forEach(img => {
+        img.addEventListener('error', () => {
+          this.imageUrlMap.set(imageId, 'assets/images/no-image.png');
+          img.setAttribute('src', 'assets/images/no-image.png');
+        });
+      });
+    }, 0);
+    
+    return url;
   }
 
   getCategoryName(categoryId: string): string {
@@ -317,6 +367,30 @@ export class ProductListComponent implements OnInit {
             }
           }
         });
+    }
+  }
+
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    const originalSrc = img.src;
+    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bMQ0AIAwAwQJ+ZuFnBt5hYeJxN3DptGa27ae7I/Y+DnCDIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZk/aCYQAWAEEFwAAAAASUVORK5CYII=';
+    
+    // Extract file ID from the URL to make a more specific error message
+    const urlParts = originalSrc.split('/');
+    const fileId = urlParts[urlParts.length - 1];
+    
+    // Add tooltip to show error on hover
+    img.title = `File không tồn tại trong GridFS: ID=${fileId}`;
+    
+    // Add a red border to indicate missing file
+    img.style.border = '1px solid #dc3545';
+    
+    // Log the error
+    console.warn(`GridFS file not found: ID=${fileId}`);
+    
+    // Update the cache to avoid future requests
+    if (fileId && fileId.length > 5) {
+      this.imageUrlMap.set(fileId, img.src);
     }
   }
 } 

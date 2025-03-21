@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: '/api' // This assumes that in production, the API is proxied through the same domain
+  apiUrl: '/api' // For production, use relative URL or full URL to your API server
 }; 

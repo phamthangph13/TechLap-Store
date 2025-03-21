@@ -1,246 +1,155 @@
-# API Documentation: Product Search and Filtering
+# Quy trình xử lý hình ảnh, video và thumbnail
 
-## Overview
-This document provides information about the Product Search API endpoints. These endpoints allow users to search for products with various filtering options and get metadata for building filtering UI components.
+## 1. Quy trình tải lên (Upload)
 
-## Base URL
-All search API endpoints are accessible under: `/api/product-search`
+### Khi tạo mới sản phẩm:
 
-## Table of Contents
-1. [Search Products](#search-products)
-2. [Get Brand List](#get-brand-list)
-3. [Get Price Range](#get-price-range)
-4. [Get Filter Options](#get-filter-options)
+1. **Chuẩn bị dữ liệu**: 
+   - Frontend gửi request có dạng `multipart/form-data` bao gồm:
+     - Các trường thông tin sản phẩm (name, price, description, v.v.)
+     - File thumbnail (một file)
+     - Các file hình ảnh (một hoặc nhiều file)
+     - Các file video (một hoặc nhiều file)
 
----
+2. **Xử lý trên server**:
+   - Backend nhận request và lưu thông tin sản phẩm vào database
+   - Backend lưu các file vào MongoDB GridFS:
+     - Mỗi file được gán một ID duy nhất trong GridFS
+     - Backend lưu các ID này vào document của sản phẩm
 
-## Search Products
+3. **Kết quả trả về**:
+   - Backend trả về thông tin sản phẩm kèm theo các ID file đã lưu
+   - Frontend lưu lại ID sản phẩm và ID các file để hiển thị
 
-### Endpoint
-**Endpoint:** `GET /api/product-search/`  
-**Description:** Search for products with various filtering options.
+### Khi cập nhật sản phẩm:
 
-### Query Parameters
+1. **Chuẩn bị dữ liệu**: 
+   - Frontend gửi request có dạng `multipart/form-data` bao gồm:
+     - ID sản phẩm cần cập nhật
+     - Các trường thông tin cần cập nhật
+     - File thumbnail mới (nếu cập nhật)
+     - Các file hình ảnh mới (nếu cập nhật)
+     - Các file video mới (nếu cập nhật)
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| query | String | No | Text search query for product name, brand, or model |
-| min_price | Integer | No | Minimum price filter |
-| max_price | Integer | No | Maximum price filter |
-| min_discount | Integer | No | Minimum discount percentage filter |
-| max_discount | Integer | No | Maximum discount percentage filter |
-| brands | String | No | Comma-separated list of brands to filter by (e.g., "Dell,Apple,HP") |
-| category_ids | String | No | Comma-separated list of category IDs to filter by |
-| status | String | No | Filter by product status (available, sold_out, discontinued) |
-| cpu | String | No | Filter by CPU (partial match) |
-| ram | String | No | Filter by RAM (partial match) |
-| storage | String | No | Filter by storage (partial match) |
-| gpu | String | No | Filter by GPU (partial match) |
-| sort_by | String | No | Field to sort by (price, discount_price, discount_percent, created_at) |
-| sort_order | String | No | Sort direction: "asc" or "desc" (default: "asc") |
-| page | Integer | No | Page number for pagination (default: 1) |
-| limit | Integer | No | Number of items per page (default: 10, max: 100) |
+2. **Xử lý trên server**:
+   - Backend kiểm tra xem có file mới được tải lên không
+   - Nếu có file mới:
+     - Xóa file cũ từ GridFS (nếu có)
+     - Lưu file mới vào GridFS và nhận ID mới
+     - Cập nhật ID file mới vào document sản phẩm
 
-### Response
-- Status Code: 200 OK
-- Content Type: application/json
-- Body: Paginated result object
+3. **Kết quả trả về**:
+   - Backend trả về thông tin sản phẩm đã cập nhật kèm theo các ID file mới
 
-**Response Body Format:**
-```json
-{
-  "total": 45,             // Total number of matching products
-  "page": 1,               // Current page
-  "limit": 10,             // Items per page
-  "pages": 5,              // Total number of pages
-  "products": [            // Array of product objects
-    {
-      "_id": "6600a1c3b6f4a2d4e8f3b131",
-      "name": "Laptop Dell XPS 15",
-      "brand": "Dell",
-      "model": "XPS 15 9530",
-      "price": 35000000,
-      "discount_percent": 10,
-      "discount_price": 31500000,
-      "specs": {
-        "cpu": "Intel Core i7-13700H",
-        "ram": "16GB DDR5",
-        "storage": "512GB NVMe SSD",
-        "display": "15.6 inch 4K OLED",
-        "gpu": "NVIDIA RTX 4060 6GB",
-        "battery": "86Wh",
-        "os": "Windows 11 Pro",
-        "ports": ["USB-C", "HDMI", "3.5mm Audio"]
-      },
-      "stock_quantity": 50,
-      "category_ids": ["6600a1c3b6f4a2d4e8f3b130"],
-      "thumbnail": "6600a1c3b6f4a2d4e8f3b132",
-      "created_at": "2023-03-21T08:30:00.000Z",
-      "updated_at": "2023-03-21T08:30:00.000Z",
-      "status": "available"
-    },
-    // Additional products...
-  ]
-}
-```
+## 2. Quy trình hiển thị
 
-### Examples
+### Lấy thông tin sản phẩm:
 
-#### Basic Text Search
-```
-GET /api/product-search/?query=dell laptop
-```
+1. **Yêu cầu từ client**:
+   - Frontend gửi request để lấy thông tin chi tiết sản phẩm
+   - Backend trả về thông tin sản phẩm bao gồm ID của thumbnail, images và videos
 
-#### Price Range and Brand Filter
-```
-GET /api/product-search/?min_price=20000000&max_price=40000000&brands=Dell,Lenovo
-```
+2. **Xử lý trên client**:
+   - Frontend nhận được thông tin sản phẩm cùng ID các file media
+   - Frontend sẽ sử dụng các ID này để lấy nội dung file
 
-#### Category and Specs Filter
-```
-GET /api/product-search/?category_ids=6600a1c3b6f4a2d4e8f3b130&cpu=Intel&ram=16GB
-```
+### Lấy nội dung file:
 
-#### Complex Filter with Sorting and Pagination
-```
-GET /api/product-search/?min_price=25000000&min_discount=10&brands=Dell,HP&status=available&sort_by=price&sort_order=desc&page=2&limit=20
-```
+1. **Yêu cầu từ client**:
+   - Frontend gửi request đến endpoint `/api/products/files/{file_id}`
+   - Backend kiểm tra ID file trong GridFS
 
-## Get Brand List
+2. **Xử lý trên server**:
+   - Backend tìm kiếm file trong GridFS theo ID
+   - Nếu tìm thấy, backend trả về nội dung file với loại MIME tương ứng
+   - Nếu không tìm thấy, backend trả về lỗi 404
 
-### Endpoint
-**Endpoint:** `GET /api/product-search/brands`  
-**Description:** Retrieve a list of all available brands for filter UI options.
+3. **Hiển thị trên client**:
+   - Frontend nhận nội dung file và hiển thị tương ứng:
+     - Thumbnail: Hiển thị như hình ảnh chính của sản phẩm
+     - Images: Hiển thị trong gallery hoặc slider ảnh
+     - Videos: Hiển thị kèm theo player để phát video
 
-### Response
-- Status Code: 200 OK
-- Content Type: application/json
-- Body: Array of brand names
+## 3. Xử lý lỗi
 
-**Response Body Format:**
-```json
-{
-  "brands": [
-    "Dell",
-    "HP",
-    "Apple",
-    "Lenovo",
-    "Asus",
-    "Acer"
-  ]
-}
-```
+1. **File không tồn tại**:
+   - Nếu file ID không tồn tại trong GridFS, backend trả về lỗi 404
+   - Frontend hiển thị ảnh placeholder mặc định
 
-### Example
-```
-GET /api/product-search/brands
-```
+2. **File không hợp lệ**:
+   - Nếu file có vấn đề (định dạng không đúng, nội dung lỗi), backend trả về lỗi
+   - Frontend hiển thị thông báo lỗi hoặc ảnh placeholder
 
-## Get Price Range
+## 4. Lưu ý quan trọng
 
-### Endpoint
-**Endpoint:** `GET /api/product-search/price-range`  
-**Description:** Get the minimum and maximum product prices available in the catalog for price filter UI components.
+1. **Định dạng file hỗ trợ**:
+   - Images: JPEG, PNG, GIF
+   - Videos: MP4, WebM
 
-### Response
-- Status Code: 200 OK
-- Content Type: application/json
-- Body: Price range object
+2. **Giới hạn kích thước**:
+   - Thumbnail: Tối đa 2MB
+   - Images: Tối đa 5MB mỗi file
+   - Videos: Tối đa 20MB mỗi file
 
-**Response Body Format:**
-```json
-{
-  "min_price": 5000000,
-  "max_price": 100000000
-}
-```
+3. **Cấu trúc URL cho hiển thị file**:
+   - Thumbnail: `/api/products/files/{thumbnail_id}`
+   - Images: `/api/products/files/{image_id}`
+   - Videos: `/api/products/files/{video_id}`
 
-### Example
-```
-GET /api/product-search/price-range
-```
+4. **Cơ chế bộ nhớ cache**:
+   - Frontend nên cache file đã tải để tránh tải lại nhiều lần
+   - Các file được phục vụ với header cache phù hợp
 
-## Get Filter Options
+## 5. Vấn đề thường gặp và cách khắc phục
 
-### Endpoint
-**Endpoint:** `GET /api/product-search/filter-options`  
-**Description:** Get all available filter options for specs fields, statuses, and categories to build filter UI components.
+### Lỗi 404 khi truy cập file trong GridFS
 
-### Response
-- Status Code: 200 OK
-- Content Type: application/json
-- Body: Filter options object
+**Nguyên nhân phổ biến**:
+- Xung đột tên cơ sở dữ liệu trong cấu hình MongoDB
+- ID file không tồn tại hoặc đã bị xóa
+- Kết nối tới database sai
 
-**Response Body Format:**
-```json
-{
-  "specs": {
-    "cpu": [
-      "Intel Core i7-13700H",
-      "Intel Core i5-1240P",
-      "AMD Ryzen 9 7940HS"
-    ],
-    "ram": [
-      "16GB DDR5",
-      "8GB DDR4",
-      "32GB DDR5"
-    ],
-    "storage": [
-      "512GB NVMe SSD",
-      "1TB NVMe SSD",
-      "256GB NVMe SSD"
-    ],
-    "gpu": [
-      "NVIDIA RTX 4060 6GB",
-      "Intel Iris Xe Graphics",
-      "NVIDIA RTX 4070 8GB"
-    ],
-    "display": [
-      "15.6 inch 4K OLED",
-      "14 inch FHD IPS",
-      "16 inch QHD+"
-    ],
-    "os": [
-      "Windows 11 Pro",
-      "Windows 11 Home",
-      "macOS Ventura"
-    ]
-  },
-  "status": [
-    "available",
-    "sold_out",
-    "discontinued"
-  ],
-  "categories": [
-    {
-      "id": "6600a1c3b6f4a2d4e8f3b130",
-      "name": "Laptops"
-    },
-    {
-      "id": "6600a1c3b6f4a2d4e8f3b136",
-      "name": "Smartphones"
-    }
-  ]
-}
-```
+**Cách khắc phục**:
+1. **Xung đột tên database**:
+   - Trong file `database.py` có thể cấu hình tên database khác với tên được sử dụng trong API endpoint
+   - Kiểm tra cấu hình kết nối trong endpoint `/api/products/files/{file_id}`
+   - Đảm bảo tên database trong `.env` và trong code là giống nhau: 
+     ```
+     # Trong .env
+     DB_NAME=product_catalog
+     
+     # Trong code endpoint
+     db = client.product_catalog  # Không phải client.tech_laptop_db
+     ```
 
-### Example
-```
-GET /api/product-search/filter-options
-```
+2. **Kiểm tra dữ liệu**:
+   - Sử dụng MongoDB Compass hoặc mongo shell để kiểm tra file trong GridFS:
+     ```
+     use product_catalog
+     db.fs.files.find({_id: ObjectId("file_id_here")})
+     ```
+   - Nếu không tìm thấy, file có thể đã bị xóa hoặc chưa được lưu đúng
 
-## Error Handling
+3. **Xử lý lỗi trong frontend**:
+   - Luôn đặt ảnh placeholder mặc định cho trường hợp ảnh không tải được
+   - Cài đặt xử lý lỗi trong các component hiển thị media để tránh giao diện bị vỡ
 
-The API returns appropriate HTTP status codes and error messages for different scenarios:
+### Lỗi khi tải file lên
 
-| Status Code | Description | Possible Causes |
-|-------------|-------------|----------------|
-| 400 | Bad Request | Invalid parameter format or values |
-| 500 | Internal Server Error | Server-side error during processing |
+**Nguyên nhân phổ biến**:
+- Kích thước file vượt quá giới hạn
+- Định dạng file không được hỗ trợ
+- Quyền truy cập vào MongoDB GridFS bị giới hạn
 
-**Error Response Format:**
-```json
-{
-  "message": "Error description"
-}
-``` 
+**Cách khắc phục**:
+1. **Giới hạn dung lượng**:
+   - Kiểm tra và thay đổi giới hạn dung lượng file trong cấu hình server
+   - Thêm validation trên frontend để kiểm tra kích thước file trước khi gửi
+
+2. **Định dạng file**:
+   - Kiểm tra và chỉ cho phép các định dạng file được hỗ trợ
+   - Hiển thị thông báo rõ ràng cho người dùng về các định dạng được chấp nhận
+
+3. **Quyền truy cập**:
+   - Kiểm tra quyền truy cập vào MongoDB
+   - Kiểm tra cấu hình của GridFS collection trong database

@@ -149,6 +149,7 @@
           <th>Thương hiệu</th>
           <th>Model</th>
           <th>Giá</th>
+          <th>Biến thể</th>
           <th>Tồn kho</th>
           <th>Trạng thái</th>
           <th>Hành động</th>
@@ -158,7 +159,7 @@
         <tr *ngFor="let product of products">
           <td class="product-image-cell">
             <div class="product-image">
-              <img [src]="getImageUrl(product.thumbnail || '')" alt="{{ product.name }}" />
+              <img [src]="getImageUrl(product.thumbnail || '')" (error)="handleImageError($event)" alt="{{ product.name }}" />
             </div>
           </td>
           <td class="category-cell">
@@ -169,7 +170,12 @@
               <span class="no-category" *ngIf="!product.category_ids || product.category_ids.length === 0">Không có</span>
             </div>
           </td>
-          <td class="name-cell">{{ product.name }}</td>
+          <td class="name-cell">
+            {{ product.name }}
+            <div class="short-description" *ngIf="product.short_description">
+              {{ product.short_description }}
+            </div>
+          </td>
           <td>{{ product.brand }}</td>
           <td>{{ product.model }}</td>
           <td class="price-cell">
@@ -182,6 +188,18 @@
             <div *ngIf="product.discount_percent === 0" class="regular-price">
               {{ getFormattedPrice(product.price) }}
             </div>
+          </td>
+          <td class="variants-cell">
+            <div class="variant-info" *ngIf="product.variant_specs && product.variant_specs.length > 0">
+              <span class="variant-count">{{ product.variant_specs.length }} biến thể</span>
+            </div>
+            <div class="colors-info" *ngIf="product.colors && product.colors.length > 0">
+              <span class="color-count">{{ product.colors.length }} màu sắc</span>
+              <div class="color-preview">
+                <span class="color-dot" *ngFor="let color of product.colors" [style.background-color]="color.code"></span>
+              </div>
+            </div>
+            <span *ngIf="(!product.variant_specs || product.variant_specs.length === 0) && (!product.colors || product.colors.length === 0)">Không có</span>
           </td>
           <td>{{ product.stock_quantity }}</td>
           <td class="status-cell">
