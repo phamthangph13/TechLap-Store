@@ -116,11 +116,19 @@
           </div>
 
           <div class="form-group full-width">
-            <label for="category_ids">Danh mục</label>
-            <select id="category_ids" formControlName="category_ids">
-              <option value="">Không có</option>
-              <option *ngFor="let category of categories" [value]="category._id">{{ category.name }}</option>
-            </select>
+            <label>Danh mục sản phẩm</label>
+            <div class="category-checkbox-container">
+              <div class="category-checkbox-item" *ngFor="let category of categories">
+                <input type="checkbox" 
+                       [id]="'category_' + category._id" 
+                       [checked]="isCategorySelected(category._id)"
+                       (change)="onCategoryChange($event, category._id)">
+                <label [for]="'category_' + category._id">{{ category.name }}</label>
+              </div>
+              <div *ngIf="categories.length === 0" class="no-categories-message">
+                Không có danh mục nào. Vui lòng thêm danh mục trước.
+              </div>
+            </div>
           </div>
         </div>
 

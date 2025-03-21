@@ -31,7 +31,7 @@ interface Product {
   stock_quantity: number;
   status: string;
   created_at?: string;
-  category_ids?: string[] | string;
+  category_ids?: string[];
   thumbnail?: string | null;
   images?: string[];
   videos?: string[];
@@ -97,7 +97,7 @@ export class ProductFormComponent implements OnInit {
         ports: this.fb.array([this.fb.control('')], [atLeastOnePortRequired])
       }),
       stock_quantity: [10, [Validators.required, Validators.min(1)]],
-      category_ids: [''],
+      category_ids: this.fb.array([]),
       status: ['available'],
       thumbnail: [null],
       images: [[]],
@@ -155,6 +155,10 @@ export class ProductFormComponent implements OnInit {
     return this.productForm.get('specs')?.get('ports') as FormArray;
   }
   
+  get categoryIdsArray(): FormArray {
+    return this.productForm.get('category_ids') as FormArray;
+  }
+  
   // Kiểm tra xem cổng kết nối có hợp lệ hay không
   get portsInvalid(): boolean {
     if (!this.portsArray || this.portsArray.length === 0) return true;
@@ -173,6 +177,26 @@ export class ProductFormComponent implements OnInit {
     if (this.portsArray.length > 1) {
       this.portsArray.removeAt(index);
     }
+  }
+
+  onCategoryChange(event: any, categoryId: string): void {
+    const checked = event.target.checked;
+    const categoryIdsArray = this.categoryIdsArray;
+    
+    if (checked) {
+      // Add category ID to the array
+      categoryIdsArray.push(this.fb.control(categoryId));
+    } else {
+      // Remove category ID from the array
+      const index = categoryIdsArray.controls.findIndex(control => control.value === categoryId);
+      if (index >= 0) {
+        categoryIdsArray.removeAt(index);
+      }
+    }
+  }
+
+  isCategorySelected(categoryId: string): boolean {
+    return this.categoryIdsArray.controls.some(control => control.value === categoryId);
   }
 
   fetchCategories(): void {
@@ -223,15 +247,16 @@ export class ProductFormComponent implements OnInit {
     // Replace the current empty FormArray with the new one
     (this.productForm.get('specs') as FormGroup).setControl('ports', portsArray);
 
-    // Determine category ID to display
-    let categoryId = '';
-    if (product.category_ids) {
-      if (Array.isArray(product.category_ids) && product.category_ids.length > 0) {
-        categoryId = product.category_ids[0];
-      } else if (typeof product.category_ids === 'string') {
-        categoryId = product.category_ids;
-      }
+    // Handle category IDs
+    const categoryIdsArray = this.fb.array([]);
+    if (product.category_ids && product.category_ids.length > 0) {
+      product.category_ids.forEach((id: string) => {
+        if (id && id.trim() !== '') {
+          categoryIdsArray.push(this.fb.control(id));
+        }
+      });
     }
+    this.productForm.setControl('category_ids', categoryIdsArray);
 
     // Patch other form values
     this.productForm.patchValue({
@@ -250,7 +275,6 @@ export class ProductFormComponent implements OnInit {
         os: product.specs.os
       },
       stock_quantity: product.stock_quantity,
-      category_ids: categoryId,
       status: product.status || 'available'
     });
 
@@ -363,29 +387,10 @@ export class ProductFormComponent implements OnInit {
     });
     
     // Add category_ids as separate entries
-    if (productData.category_ids) {
-      // Convert to array format
-      let categoryArray: string[] = [];
-      
-      if (typeof productData.category_ids === 'string' && productData.category_ids.trim() !== '') {
-        // Single category ID
-        categoryArray = [productData.category_ids.trim()];
-      } else if (Array.isArray(productData.category_ids)) {
-        // Filter out any empty values
-        categoryArray = productData.category_ids
-          .filter((id: string) => typeof id === 'string' && id.trim() !== '')
-          .map((id: string) => id.trim());
-      }
-      
-      // Only proceed if we have valid categories
-      if (categoryArray.length > 0) {
-        console.log('Using category_ids:', categoryArray);
-        
-        // Append each category ID separately to the FormData
-        categoryArray.forEach(categoryId => {
-          formData.append('category_ids[]', categoryId);
-        });
-      }
+    if (productData.category_ids && productData.category_ids.length > 0) {
+      productData.category_ids.forEach((categoryId: string) => {
+        formData.append('category_ids', String(categoryId));
+      });
     }
     
     // Add media files to form data
@@ -458,10 +463,16 @@ export class ProductFormComponent implements OnInit {
       .map(control => control.value)
       .filter(port => port && port.trim() !== '');
     
+    // Get category IDs
+    const categoryIds = this.categoryIdsArray.controls
+      .map(control => control.value)
+      .filter(id => id && id.trim() !== '');
+    
     // Chuẩn bị dữ liệu sản phẩm
     return {
       ...formValue,
       discount_price: this.autoCalculatedDiscount,
+      category_ids: categoryIds,
       specs: {
         ...formValue.specs,
         ports
