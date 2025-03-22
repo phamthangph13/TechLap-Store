@@ -4,7 +4,7 @@ import { NgIf, NgFor, NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { environment } from '../../../../../environments/environment';
-import { FileService } from '../../../../../app/services/file.service';
+import { MediaService } from '../../../../../app/services/media.service';
 import { ProductSearchService, SearchParams, FilterOptions, PriceRange } from '../../services/product-search.service';
 
 interface Category {
@@ -99,7 +99,7 @@ export class ProductListComponent implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private fileService: FileService,
+    private mediaService: MediaService,
     private searchService: ProductSearchService,
     private fb: FormBuilder
   ) {
@@ -263,13 +263,13 @@ export class ProductListComponent implements OnInit {
 
   // Phương thức tải trước và kiểm tra URL hình ảnh
   private preloadImages(): void {
-    this.products.forEach(product => {
+    for (const product of this.products) {
       if (product.thumbnail) {
-        this.fileService.validateImageUrl(product.thumbnail).subscribe(url => {
+        this.mediaService.getImageUrl(product.thumbnail).subscribe(url => {
           this.imageUrlMap.set(product.thumbnail!, url);
         });
       }
-    });
+    }
   }
 
   fetchCategories(): void {
@@ -291,31 +291,23 @@ export class ProductListComponent implements OnInit {
 
   // Helper methods for template
   getImageUrl(imageId: string): string {
-    if (!imageId || imageId === 'undefined' || imageId === 'null') {
-      return 'assets/images/no-image.png';
+    if (!imageId) {
+      return 'assets/images/product-placeholder.png';
     }
     
-    // Sử dụng URL từ cache nếu có
+    // If we have the URL in our local cache, use it
     if (this.imageUrlMap.has(imageId)) {
-      return this.imageUrlMap.get(imageId)!;
+      return this.imageUrlMap.get(imageId) as string;
     }
     
-    // Nếu không có trong cache, sử dụng URL endpoint trực tiếp
-    const url = `/api/products/files/${imageId}`;
-    this.imageUrlMap.set(imageId, url);
+    // Otherwise try to fetch it
+    this.mediaService.getImageUrl(imageId).subscribe(url => {
+      this.imageUrlMap.set(imageId, url);
+      return url;
+    });
     
-    // Cài đặt một handler cho các hình ảnh bị lỗi
-    setTimeout(() => {
-      const images = document.querySelectorAll(`img[src="${url}"]`);
-      images.forEach(img => {
-        img.addEventListener('error', () => {
-          this.imageUrlMap.set(imageId, 'assets/images/no-image.png');
-          img.setAttribute('src', 'assets/images/no-image.png');
-        });
-      });
-    }, 0);
-    
-    return url;
+    // Return placeholder until we have the real URL
+    return 'assets/images/product-placeholder.png';
   }
 
   getCategoryName(categoryId: string): string {

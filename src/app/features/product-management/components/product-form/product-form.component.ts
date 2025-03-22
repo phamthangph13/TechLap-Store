@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule, Abs
 import { HttpClient, HttpClientModule, HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIf, NgFor } from '@angular/common';
-import { FileService } from '../../../../../app/services/file.service';
+import { MediaService } from '../../../../../app/services/media.service';
 import { ProductService } from '../../services/product.service';
 import { CategoryService } from '../../services/category.service';
 
@@ -111,7 +111,7 @@ export class ProductFormComponent implements OnInit {
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
-    private fileService: FileService,
+    private mediaService: MediaService,
     public productService: ProductService,
     private categoryService: CategoryService
   ) {
@@ -558,6 +558,7 @@ export class ProductFormComponent implements OnInit {
     formData.append('discount_percent', formValue.discount_percent?.toString() || '0');
     formData.append('stock_quantity', formValue.stock_quantity.toString());
     formData.append('short_description', formValue.short_description || '');
+    formData.append('status', formValue.status || 'available');
 
     // Append product specs
     const specsValue = formValue.specs || {};
@@ -794,7 +795,7 @@ export class ProductFormComponent implements OnInit {
 
   handleImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bMQ0AIAwAwQJ+ZuFnBt5hYeJxN3DptGa27ae7I/Y+DnCDIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZk/aCYQAWAEEFwAAAAASUVORK5CYII=';
+    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bMQ0AIAwAwQJ+ZuFnBt5hYeJxN3DptGa27ae7I/Y+DnCDIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZk/aCYQAWAEEFwAAAAASUVORK5CYII=';
     
     // Add a tooltip or text to indicate the file is missing
     const parent = img.parentElement;

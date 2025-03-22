@@ -6,7 +6,7 @@ import { provideClientHydration } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptorsFromDi, withInterceptors } from '@angular/common/http';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { apiInterceptor } from './core/interceptors/api.interceptor';
-import { FileService } from './services/file.service';
+import { MediaService } from './services/media.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -16,6 +16,6 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([AuthInterceptor, apiInterceptor]),
       withInterceptorsFromDi()
     ),
-    FileService
+    MediaService
   ]
 };
