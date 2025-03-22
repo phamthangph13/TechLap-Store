@@ -1,0 +1,95 @@
+.page-title {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0;
+}
+
+.card {
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  
+  .card-header {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    padding: 0.75rem 1.25rem;
+  }
+}
+
+.table {
+  th {
+    font-weight: 600;
+    border-bottom-width: 1px;
+  }
+  
+  td, th {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+  }
+}
+
+.card.border-0 {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+}
+
+h3 {
+  font-weight: 700;
+}
+
+.text-end {
+  text-align: right;
+}
+
+.bg-light {
+  background-color: #f8f9fa;
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-select, .form-control {
+  border-radius: 5px;
+  border: 1px solid #ced4da;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  
+  &:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+}
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.alert {
+  border-radius: 5px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  border-color: #3498db;
+  
+  &:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+  }
+}
+
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}

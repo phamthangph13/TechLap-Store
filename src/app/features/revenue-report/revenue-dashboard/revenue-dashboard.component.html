@@ -1,4 +1,321 @@
 <div class="container-fluid">
-  <h2 class="page-title">Báo cáo thống kê doanh thu</h2>
-  <p>Trang đang phát triển...</p>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title">Báo cáo thống kê doanh thu</h2>
+    <button class="btn btn-primary" (click)="refreshData()">
+      <i class="fas fa-sync-alt me-2"></i>Làm mới
+    </button>
+  </div>
+
+  <!-- API Connectivity Status -->
+  <div class="alert" [ngClass]="{'alert-info': apiConnectivityMessage && !apiConnectionOk && !apiConnectivityMessage.includes('Không thể'), 'alert-danger': apiConnectivityMessage && !apiConnectionOk && apiConnectivityMessage.includes('Không thể'), 'alert-success': apiConnectionOk}" *ngIf="apiConnectivityMessage && !apiConnectionOk">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <i class="me-2" [ngClass]="{'fas fa-info-circle': !apiConnectivityMessage.includes('Không thể'), 'fas fa-exclamation-triangle': apiConnectivityMessage.includes('Không thể')}"></i>
+        <span>{{ apiConnectivityMessage }}</span>
+      </div>
+      <button class="btn btn-sm btn-warning" (click)="useDemoData()">
+        Sử dụng dữ liệu mẫu
+      </button>
+    </div>
+  </div>
+
+  <!-- Revenue Summary Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Tổng quan doanh thu</h5>
+    </div>
+    <div class="card-body">
+      <div *ngIf="loadingSummary" class="text-center p-3">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+      
+      <div *ngIf="summaryError" class="alert alert-danger">
+        {{ summaryError }}
+      </div>
+
+      <div *ngIf="!loadingSummary && !summaryError && revenueSummary">
+        <div class="row">
+          <!-- Today's Stats -->
+          <div class="col-md-3 mb-3">
+            <div class="card h-100 border-0 bg-light">
+              <div class="card-body">
+                <h6 class="text-muted">Doanh thu hôm nay</h6>
+                <h3 class="mb-0">{{ formatCurrency(revenueSummary.today.revenue) }}</h3>
+                <p class="text-muted mb-0">{{ revenueSummary.today.orders }} đơn hàng</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- This Month's Stats -->
+          <div class="col-md-3 mb-3">
+            <div class="card h-100 border-0 bg-light">
+              <div class="card-body">
+                <h6 class="text-muted">Doanh thu tháng này</h6>
+                <h3 class="mb-0">{{ formatCurrency(revenueSummary.this_month.revenue) }}</h3>
+                <p class="text-muted mb-0">{{ revenueSummary.this_month.orders }} đơn hàng</p>
+                <p class="text-muted mb-0">TB: {{ formatCurrency(revenueSummary.this_month.avg_order_value) }}/đơn</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Year-to-Date Stats -->
+          <div class="col-md-3 mb-3">
+            <div class="card h-100 border-0 bg-light">
+              <div class="card-body">
+                <h6 class="text-muted">Doanh thu năm nay</h6>
+                <h3 class="mb-0">{{ formatCurrency(revenueSummary.this_year.revenue) }}</h3>
+                <p class="text-muted mb-0">{{ revenueSummary.this_year.orders }} đơn hàng</p>
+                <p class="text-muted mb-0">TB: {{ formatCurrency(revenueSummary.this_year.avg_order_value) }}/đơn</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Growth Stats -->
+          <div class="col-md-3 mb-3">
+            <div class="card h-100 border-0" [ngClass]="{'bg-success text-white': revenueSummary.growth.month_over_month > 0, 'bg-danger text-white': revenueSummary.growth.month_over_month < 0, 'bg-light': revenueSummary.growth.month_over_month === 0}">
+              <div class="card-body">
+                <h6 [ngClass]="{'text-white': revenueSummary.growth.month_over_month !== 0, 'text-muted': revenueSummary.growth.month_over_month === 0}">
+                  Tăng trưởng (so với tháng trước)
+                </h6>
+                <h3 class="mb-0">
+                  <i [ngClass]="{'fas fa-arrow-up': revenueSummary.growth.month_over_month > 0, 'fas fa-arrow-down': revenueSummary.growth.month_over_month < 0, 'fas fa-minus': revenueSummary.growth.month_over_month === 0}" class="me-2"></i>
+                  {{ revenueSummary.growth.month_over_month }}%
+                </h3>
+                <p [ngClass]="{'text-white': revenueSummary.growth.month_over_month !== 0, 'text-muted': revenueSummary.growth.month_over_month === 0}" class="mb-0">
+                  Tháng {{ revenueSummary.growth.month_name }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Products -->
+        <div class="mt-4">
+          <h5>Top sản phẩm bán chạy</h5>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Sản phẩm</th>
+                  <th class="text-end">Số lượng đã bán</th>
+                  <th class="text-end">Doanh thu</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let product of revenueSummary.top_products">
+                  <td>{{ product.productName }}</td>
+                  <td class="text-end">{{ product.quantity_sold }}</td>
+                  <td class="text-end">{{ formatCurrency(product.total_revenue) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Statistics Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Thống kê doanh thu theo thời gian</h5>
+    </div>
+    <div class="card-body">
+      <!-- Filter Controls -->
+      <div class="row mb-4 align-items-end">
+        <div class="col-md-3 mb-3">
+          <label for="periodSelect" class="form-label">Khoảng thời gian</label>
+          <select id="periodSelect" class="form-select" [(ngModel)]="selectedPeriod" (change)="onPeriodChange()">
+            <option value="daily">Hàng ngày</option>
+            <option value="weekly">Hàng tuần</option>
+            <option value="monthly">Hàng tháng</option>
+            <option value="yearly">Hàng năm</option>
+            <option value="custom">Tùy chỉnh</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mb-3" *ngIf="selectedPeriod === 'yearly'">
+          <label for="yearSelect" class="form-label">Năm</label>
+          <select id="yearSelect" class="form-select" [(ngModel)]="selectedYear" (change)="onPeriodChange()">
+            <option [value]="year" *ngFor="let year of availableYears">{{ year }}</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mb-3" *ngIf="selectedPeriod === 'monthly'">
+          <label for="yearMonthSelect" class="form-label">Năm</label>
+          <select id="yearMonthSelect" class="form-select" [(ngModel)]="selectedYear" (change)="onPeriodChange()">
+            <option [value]="year" *ngFor="let year of availableYears">{{ year }}</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mb-3" *ngIf="selectedPeriod === 'monthly'">
+          <label for="monthSelect" class="form-label">Tháng</label>
+          <select id="monthSelect" class="form-select" [(ngModel)]="selectedMonth" (change)="onPeriodChange()">
+            <option [value]="month.value" *ngFor="let month of availableMonths">{{ month.name }}</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 mb-3" *ngIf="selectedPeriod === 'custom'">
+          <label for="startDate" class="form-label">Từ ngày</label>
+          <input type="date" id="startDate" class="form-control" [(ngModel)]="startDate">
+        </div>
+
+        <div class="col-md-3 mb-3" *ngIf="selectedPeriod === 'custom'">
+          <label for="endDate" class="form-label">Đến ngày</label>
+          <input type="date" id="endDate" class="form-control" [(ngModel)]="endDate">
+        </div>
+
+        <div class="col-auto mb-3" *ngIf="selectedPeriod === 'custom'">
+          <button class="btn btn-primary" (click)="onPeriodChange()">Áp dụng</button>
+        </div>
+      </div>
+
+      <!-- Loading & Error States -->
+      <div *ngIf="loadingStats" class="text-center p-3">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+      
+      <div *ngIf="statsError" class="alert alert-danger">
+        {{ statsError }}
+      </div>
+
+      <!-- Demo Data Notice -->
+      <div *ngIf="usingDemoStats && !loadingStats && !statsError" class="alert alert-warning mb-3">
+        <i class="fas fa-info-circle me-2"></i> Đang hiển thị dữ liệu mẫu vì không có dữ liệu cho khoảng thời gian đã chọn.
+      </div>
+
+      <!-- Data Display -->
+      <div *ngIf="!loadingStats && !statsError">
+        <div *ngIf="revenueStats.length === 0" class="alert alert-info">
+          Không có dữ liệu doanh thu cho khoảng thời gian đã chọn
+        </div>
+        
+        <div *ngIf="revenueStats.length > 0" class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Kỳ</th>
+                <th class="text-end">Tổng doanh thu</th>
+                <th class="text-end">Số đơn hàng</th>
+                <th class="text-end">Giá trị trung bình</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stat of revenueStats">
+                <td>{{ stat.period }}</td>
+                <td class="text-end">{{ formatCurrency(stat.total_revenue) }}</td>
+                <td class="text-end">{{ stat.total_orders }}</td>
+                <td class="text-end">{{ formatCurrency(stat.average_order_value) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Revenue Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Doanh thu theo sản phẩm</h5>
+    </div>
+    <div class="card-body">
+      <!-- Filter Controls -->
+      <div class="row mb-4 align-items-end">
+        <div class="col-md-3 mb-3">
+          <label for="productPeriodSelect" class="form-label">Khoảng thời gian</label>
+          <select id="productPeriodSelect" class="form-select" [(ngModel)]="productPeriod" (change)="onProductPeriodChange()">
+            <option value="daily">Hàng ngày</option>
+            <option value="weekly">Hàng tuần</option>
+            <option value="monthly">Hàng tháng</option>
+            <option value="yearly">Hàng năm</option>
+            <option value="custom">Tùy chỉnh</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mb-3" *ngIf="productPeriod === 'yearly'">
+          <label for="productYearSelect" class="form-label">Năm</label>
+          <select id="productYearSelect" class="form-select" [(ngModel)]="productYear" (change)="onProductPeriodChange()">
+            <option [value]="year" *ngFor="let year of availableYears">{{ year }}</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mb-3" *ngIf="productPeriod === 'monthly'">
+          <label for="productYearMonthSelect" class="form-label">Năm</label>
+          <select id="productYearMonthSelect" class="form-select" [(ngModel)]="productYear" (change)="onProductPeriodChange()">
+            <option [value]="year" *ngFor="let year of availableYears">{{ year }}</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mb-3" *ngIf="productPeriod === 'monthly'">
+          <label for="productMonthSelect" class="form-label">Tháng</label>
+          <select id="productMonthSelect" class="form-select" [(ngModel)]="productMonth" (change)="onProductPeriodChange()">
+            <option [value]="month.value" *ngFor="let month of availableMonths">{{ month.name }}</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 mb-3" *ngIf="productPeriod === 'custom'">
+          <label for="productStartDate" class="form-label">Từ ngày</label>
+          <input type="date" id="productStartDate" class="form-control" [(ngModel)]="productStartDate">
+        </div>
+
+        <div class="col-md-3 mb-3" *ngIf="productPeriod === 'custom'">
+          <label for="productEndDate" class="form-label">Đến ngày</label>
+          <input type="date" id="productEndDate" class="form-control" [(ngModel)]="productEndDate">
+        </div>
+
+        <div class="col-auto mb-3" *ngIf="productPeriod === 'custom'">
+          <button class="btn btn-primary" (click)="onProductPeriodChange()">Áp dụng</button>
+        </div>
+      </div>
+
+      <!-- Loading & Error States -->
+      <div *ngIf="loadingProducts" class="text-center p-3">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+      
+      <div *ngIf="productsError" class="alert alert-danger">
+        {{ productsError }}
+      </div>
+
+      <!-- Demo Data Notice -->
+      <div *ngIf="usingDemoProducts && !loadingProducts && !productsError" class="alert alert-warning mb-3">
+        <i class="fas fa-info-circle me-2"></i> Đang hiển thị dữ liệu mẫu vì không có dữ liệu cho khoảng thời gian đã chọn.
+      </div>
+
+      <!-- Data Display -->
+      <div *ngIf="!loadingProducts && !productsError">
+        <div *ngIf="productRevenue.length === 0" class="alert alert-info">
+          Không có dữ liệu doanh thu theo sản phẩm cho khoảng thời gian đã chọn
+        </div>
+        
+        <div *ngIf="productRevenue.length > 0" class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Tên sản phẩm</th>
+                <th class="text-end">Số lượng đã bán</th>
+                <th class="text-end">Giá trung bình</th>
+                <th class="text-end">Tổng doanh thu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let product of productRevenue">
+                <td>{{ product.productName }}</td>
+                <td class="text-end">{{ product.quantity_sold }}</td>
+                <td class="text-end">{{ formatCurrency(product.avg_price) }}</td>
+                <td class="text-end">{{ formatCurrency(product.total_revenue) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

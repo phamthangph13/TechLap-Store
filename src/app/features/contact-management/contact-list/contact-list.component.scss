@@ -1,0 +1,34 @@
+.card {
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.table {
+  margin-bottom: 0;
+  
+  th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+  }
+  
+  td {
+    vertical-align: middle;
+  }
+}
+
+.btn-group {
+  .btn {
+    border-radius: 4px;
+    margin-right: 5px;
+    
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+} 

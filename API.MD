@@ -1,377 +1,298 @@
-# Order Management API Documentation
+# API Documentation for Revenue Reporting and Statistics
 
-Tài liệu này mô tả các API quản lý đơn hàng trong hệ thống.
+This document outlines the Revenue Reporting and Statistics APIs for Tech-Lap backend system. These APIs provide comprehensive data on revenue performance, trends, and product-specific sales metrics.
 
-## Endpoints
+## Base URL
 
-### 1. Danh sách đơn hàng
+```
+/api/revenue
+```
 
-Lấy danh sách đơn hàng với phân trang và lọc.
+## Authentication
 
-**URL**: `/api/orders`
+Currently, these APIs do not require authentication but will be secured in future updates.
 
-**Method**: `GET`
+## Response Format
 
-**Tham số Query**:
-
-- `page` (không bắt buộc): Số trang (mặc định: 1)
-- `limit` (không bắt buộc): Số item mỗi trang (mặc định: 10, tối đa: 100)
-- `status` (không bắt buộc): Lọc theo trạng thái đơn hàng ('pending', 'processing', 'shipped', 'delivered', 'cancelled')
-- `customer_email` (không bắt buộc): Lọc theo email khách hàng
-- `customer_phone` (không bắt buộc): Lọc theo số điện thoại khách hàng
-- `date_from` (không bắt buộc): Lọc theo ngày đặt hàng (từ) (định dạng ISO)
-- `date_to` (không bắt buộc): Lọc theo ngày đặt hàng (đến) (định dạng ISO)
-- `sort_by` (không bắt buộc): Trường để sắp xếp (mặc định: 'orderDate')
-- `sort_order` (không bắt buộc): Thứ tự sắp xếp ('asc' hoặc 'desc', mặc định: 'desc')
-
-#### Phản hồi thành công
-
-**Code**: `200 OK`
-
-**Ví dụ nội dung**:
+All API responses follow this standard format:
 
 ```json
 {
-  "success": true,
-  "message": "Orders retrieved successfully",
-  "data": {
-    "orders": [
-      {
-        "_id": "60d21b4667d0d8992e610c85",
-        "orderNumber": "TS-20230724-001",
-        "customer": {
-          "fullName": "Nguyễn Văn A",
-          "phone": "0901234567",
-          "email": "nguyenvana@example.com"
-        },
-        "status": "pending",
-        "total": 71411500,
-        "orderDate": "2023-07-24T10:30:00.000Z",
-        "updatedAt": "2023-07-24T10:30:00.000Z",
-        "items": [
-          {
-            "productId": "67deaf2d7457268626f9e0eb",
-            "productName": "MacBook Pro 16",
-            "variantName": "APPLE M3",
-            "colorName": "Silver",
-            "quantity": 1,
-            "subtotal": 71411500
-          }
-        ]
-      }
-    ],
-    "pagination": {
-      "total": 1,
-      "page": 1,
-      "limit": 10,
-      "pages": 1,
-      "has_next": false,
-      "has_prev": false
-    }
-  }
+  "success": true|false,
+  "message": "Response message",
+  "data": [] | {}
 }
 ```
 
-### 2. Chi tiết đơn hàng
+## Important Note on Revenue Calculation
 
-Lấy thông tin chi tiết về một đơn hàng cụ thể.
+All revenue metrics are calculated based on **delivered orders only**. Orders in other states (pending, processing, shipped, cancelled) are not included in revenue calculations.
 
-**URL**: `/api/orders/:order_id`
+## Order Data Structure
 
-**Method**: `GET`
+The revenue APIs rely on the following Order data structure in MongoDB:
 
-**Tham số URL**:
+```json
+{
+  "_id": ObjectId,
+  "order_number": "TS-YYYYMMDD-XXX",
+  "customer": {
+    "fullName": "Customer Name",
+    "phone": "0123456789",
+    "email": "customer@example.com"
+  },
+  "shipping_address": {
+    "province": "Province",
+    "district": "District",
+    "ward": "Ward",
+    "streetAddress": "Street Address"
+  },
+  "items": [
+    {
+      "productId": ObjectId,
+      "productName": "Product Name",
+      "variantName": "Variant Name",
+      "colorName": "Color Name",
+      "quantity": 1,
+      "unitPrice": 1000000,
+      "discountedPrice": 950000,
+      "subtotal": 950000
+    }
+  ],
+  "payment": {
+    "method": "COD",
+    "status": "pending"
+  },
+  "subtotal": 950000,
+  "discount_total": 50000,
+  "shipping_fee": 35000,
+  "total": 985000,
+  "status": "delivered",
+  "order_date": ISODate("2023-03-15T10:30:00Z"),
+  "updated_at": ISODate("2023-03-16T14:20:00Z")
+}
+```
 
-- `order_id`: ID hoặc số đơn hàng
+Key fields used in revenue calculations:
+- `status`: Used to filter for "delivered" orders only
+- `total`: Total order value including shipping fee
+- `items`: Collection of products in the order
+- `items.productId`: Used to group revenue by product
+- `items.quantity`: Used to calculate quantity sold
+- `items.subtotal`: Used to calculate revenue by product
 
-#### Phản hồi thành công
+## Available Endpoints
 
-**Code**: `200 OK`
+### 1. Get Revenue Statistics
 
-**Ví dụ nội dung**:
+Retrieve revenue statistics for different time periods (daily, weekly, monthly, yearly, or custom).
+
+**Endpoint:** `GET /api/revenue/statistics`
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| period | string | No | "monthly" | Time period for statistics: "daily", "weekly", "monthly", "yearly", "custom" |
+| start_date | string | Only for custom | - | Start date for custom period (YYYY-MM-DD) |
+| end_date | string | Only for custom | - | End date for custom period (YYYY-MM-DD) |
+| year | integer | Only for yearly | current year | Year for yearly statistics |
+| month | integer | Only for monthly | current month | Month for monthly statistics |
+
+**Example Request:**
+
+```
+GET /api/revenue/statistics?period=monthly
+```
+
+**Example Response:**
 
 ```json
 {
   "success": true,
-  "message": "Order retrieved successfully",
+  "message": "Revenue statistics for monthly period",
+  "data": [
+    {
+      "period": "January 2023",
+      "total_revenue": 25678900,
+      "total_orders": 142,
+      "average_order_value": 180836.62
+    },
+    {
+      "period": "February 2023",
+      "total_revenue": 31245700,
+      "total_orders": 165,
+      "average_order_value": 189367.88
+    }
+  ]
+}
+```
+
+### 2. Get Revenue Summary
+
+Provides a comprehensive summary of revenue metrics including today's revenue, monthly statistics, year-to-date figures, growth rates, and top-selling products.
+
+**Endpoint:** `GET /api/revenue/summary`
+
+**Example Request:**
+
+```
+GET /api/revenue/summary
+```
+
+**Example Response:**
+
+```json
+{
+  "success": true,
+  "message": "Revenue summary",
   "data": {
-    "_id": "60d21b4667d0d8992e610c85",
-    "orderNumber": "TS-20230724-001",
-    "customer": {
-      "fullName": "Nguyễn Văn A",
-      "phone": "0901234567",
-      "email": "nguyenvana@example.com"
+    "today": {
+      "revenue": 2650000,
+      "orders": 12
     },
-    "shippingAddress": {
-      "province": "Hồ Chí Minh",
-      "district": "Quận 1",
-      "ward": "Phường Bến Nghé",
-      "streetAddress": "123 Nguyễn Huệ"
+    "this_month": {
+      "revenue": 42580000,
+      "orders": 187,
+      "avg_order_value": 227700.53
     },
-    "items": [
+    "prev_month": {
+      "revenue": 39750000,
+      "orders": 176
+    },
+    "this_year": {
+      "revenue": 325450000,
+      "orders": 1432,
+      "avg_order_value": 227270.25
+    },
+    "growth": {
+      "month_over_month": 7.12,
+      "month_name": "March"
+    },
+    "top_products": [
       {
-        "productId": "67deaf2d7457268626f9e0eb",
-        "productName": "MacBook Pro 16",
-        "basePrice": 58000000,
-        "variantName": "APPLE M3",
-        "variantSpecs": {
-          "cpu": "M3 INTEL",
-          "ram": "64GB",
-          "storage": "2TB",
-          "display": "17.0 ICNH",
-          "gpu": "OLED",
-          "battery": "1000KW",
-          "os": "MAC M3",
-          "ports": ["USB-C", "HDMI"]
-        },
-        "variantPrice": 75000000,
-        "variantDiscountPercent": 5,
-        "colorName": "Silver",
-        "colorCode": "#cfc9c9",
-        "colorPriceAdjustment": 170000,
-        "colorDiscountAdjustment": 0,
-        "quantity": 1,
-        "unitPrice": 75170000,
-        "discountedPrice": 71411500,
-        "subtotal": 71411500,
-        "thumbnailUrl": "67deaf2d7457268626f9e0ca"
-      }
-    ],
-    "payment": {
-      "method": "COD",
-      "status": "pending"
-    },
-    "productInfo": [
-      {
-        "title": "Bảo hành",
-        "content": "bảo hành trong vòng 24 tháng"
+        "productId": "60a2b8e34f5e7d2b9c8f1a3d",
+        "productName": "MacBook Pro M2",
+        "total_revenue": 125750000,
+        "quantity_sold": 43
       },
       {
-        "title": "Free ship",
-        "content": "miễn phí vẫn chuyện ngoại thành và nội thành"
+        "productId": "60a2b8e34f5e7d2b9c8f1a3e",
+        "productName": "iPhone 14 Pro Max",
+        "total_revenue": 98450000,
+        "quantity_sold": 56
+      },
+      {
+        "productId": "60a2b8e34f5e7d2b9c8f1a3f",
+        "productName": "iPad Pro",
+        "total_revenue": 45320000,
+        "quantity_sold": 32
       }
-    ],
-    "subtotal": 71411500,
-    "discountTotal": 3758500,
-    "shippingFee": 0,
-    "total": 71411500,
-    "status": "pending",
-    "orderDate": "2023-07-24T10:30:00.000Z",
-    "updatedAt": "2023-07-24T10:30:00.000Z"
+    ]
   }
 }
 ```
 
-#### Phản hồi lỗi
+### 3. Get Revenue by Product
 
-**Điều kiện**: Nếu không tìm thấy đơn hàng.
+Retrieve revenue statistics broken down by product for a specific time period.
 
-**Code**: `404 NOT FOUND`
+**Endpoint:** `GET /api/revenue/by-product`
 
-**Ví dụ nội dung**:
+**Query Parameters:**
 
-```json
-{
-  "success": false,
-  "message": "Order not found",
-  "errors": ["No order with ID or order number: 60d21b4667d0d8992e610c85"]
-}
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| period | string | No | "monthly" | Time period for statistics: "daily", "weekly", "monthly", "yearly", "custom" |
+| start_date | string | Only for custom | - | Start date for custom period (YYYY-MM-DD) |
+| end_date | string | Only for custom | - | End date for custom period (YYYY-MM-DD) |
+| year | integer | Only for yearly | current year | Year for yearly statistics |
+| month | integer | Only for monthly | current month | Month for monthly statistics |
+
+**Example Request:**
+
+```
+GET /api/revenue/by-product?period=monthly&year=2023&month=3
 ```
 
-### 3. Cập nhật trạng thái đơn hàng
-
-Cập nhật trạng thái của một đơn hàng.
-
-**URL**: `/api/orders/:order_id`
-
-**Method**: `PATCH`
-
-**Tham số URL**:
-
-- `order_id`: ID hoặc số đơn hàng
-
-**Request Body**:
-
-```json
-{
-  "status": "processing"
-}
-```
-
-Các giá trị trạng thái hợp lệ: `pending`, `processing`, `shipped`, `delivered`, `cancelled`
-
-#### Phản hồi thành công
-
-**Code**: `200 OK`
-
-**Ví dụ nội dung**:
+**Example Response:**
 
 ```json
 {
   "success": true,
-  "message": "Order status updated to 'processing' successfully",
-  "data": {
-    "_id": "60d21b4667d0d8992e610c85",
-    "orderNumber": "TS-20230724-001",
-    "status": "processing",
-    "updatedAt": "2023-07-25T15:45:30.000Z",
-    // Dữ liệu đơn hàng khác...
-  }
-}
-```
-
-#### Phản hồi lỗi
-
-**Điều kiện**: Nếu request không hợp lệ.
-
-**Code**: `400 BAD REQUEST`
-
-**Ví dụ nội dung**:
-
-```json
-{
-  "success": false,
-  "message": "Invalid status",
-  "errors": ["Status must be one of: pending, processing, shipped, delivered, cancelled"]
-}
-```
-
-### 4. Hủy đơn hàng (Xóa mềm)
-
-Hủy đơn hàng bằng cách đặt trạng thái thành 'cancelled'.
-
-**URL**: `/api/orders/:order_id`
-
-**Method**: `DELETE`
-
-**Tham số URL**:
-
-- `order_id`: ID hoặc số đơn hàng
-
-#### Phản hồi thành công
-
-**Code**: `200 OK`
-
-**Ví dụ nội dung**:
-
-```json
-{
-  "success": true,
-  "message": "Order cancelled successfully"
-}
-```
-
-#### Phản hồi lỗi
-
-**Điều kiện**: Nếu không tìm thấy đơn hàng.
-
-**Code**: `404 NOT FOUND`
-
-**Ví dụ nội dung**:
-
-```json
-{
-  "success": false,
-  "message": "Order not found",
-  "errors": ["No order with ID or order number: 60d21b4667d0d8992e610c85"]
-}
-```
-
-### 5. Lấy đơn hàng theo email khách hàng
-
-Lấy tất cả đơn hàng của một khách hàng dựa trên email.
-
-**URL**: `/api/orders/by-customer/:customer_email`
-
-**Method**: `GET`
-
-**Tham số URL**:
-
-- `customer_email`: Địa chỉ email của khách hàng
-
-**Tham số Query**:
-
-- `page` (không bắt buộc): Số trang (mặc định: 1)
-- `limit` (không bắt buộc): Số item mỗi trang (mặc định: 10, tối đa: 100)
-- `status` (không bắt buộc): Lọc theo trạng thái đơn hàng ('pending', 'processing', 'shipped', 'delivered', 'cancelled')
-
-#### Phản hồi thành công
-
-**Code**: `200 OK`
-
-**Ví dụ nội dung**: Cùng định dạng với API Danh sách đơn hàng
-
-### 6. Lấy đơn hàng theo số điện thoại khách hàng
-
-Lấy tất cả đơn hàng của một khách hàng dựa trên số điện thoại.
-
-**URL**: `/api/orders/by-phone/:customer_phone`
-
-**Method**: `GET`
-
-**Tham số URL**:
-
-- `customer_phone`: Số điện thoại của khách hàng
-
-**Tham số Query**:
-
-- `page` (không bắt buộc): Số trang (mặc định: 1)
-- `limit` (không bắt buộc): Số item mỗi trang (mặc định: 10, tối đa: 100)
-- `status` (không bắt buộc): Lọc theo trạng thái đơn hàng ('pending', 'processing', 'shipped', 'delivered', 'cancelled')
-
-#### Phản hồi thành công
-
-**Code**: `200 OK`
-
-**Ví dụ nội dung**: Cùng định dạng với API Danh sách đơn hàng
-
-### 7. Thống kê đơn hàng
-
-Lấy thống kê tổng quan về đơn hàng.
-
-**URL**: `/api/orders/statistics`
-
-**Method**: `GET`
-
-#### Phản hồi thành công
-
-**Code**: `200 OK`
-
-**Ví dụ nội dung**:
-
-```json
-{
-  "success": true,
-  "message": "Order statistics retrieved successfully",
-  "data": {
-    "total_orders": 150,
-    "orders_by_status": {
-      "pending": 25,
-      "processing": 35,
-      "shipped": 40,
-      "delivered": 45,
-      "cancelled": 5
+  "message": "Product revenue statistics for monthly period",
+  "data": [
+    {
+      "productId": "60a2b8e34f5e7d2b9c8f1a3d",
+      "productName": "MacBook Pro M2",
+      "total_revenue": 42580000,
+      "quantity_sold": 14,
+      "avg_price": 3041428.57
     },
-    "total_sales": 1275000000,
-    "recent_orders": 30
-  }
+    {
+      "productId": "60a2b8e34f5e7d2b9c8f1a3e",
+      "productName": "iPhone 14 Pro Max",
+      "total_revenue": 37950000,
+      "quantity_sold": 21,
+      "avg_price": 1807142.86
+    }
+  ]
 }
 ```
 
-## Lưu ý
+## Error Responses
 
-1. API tự động đặt số lượng thành 1 nếu số lượng không hợp lệ (âm hoặc bằng 0).
-2. Cách tính giá cuối cùng bao gồm:
-   - Giá cơ bản của sản phẩm (từ trường product.price)
-   - Giá variant (chi phí bổ sung cho variant cụ thể)
-   - Điều chỉnh giá màu sắc (chi phí bổ sung cho màu cụ thể)
-   - Giảm giá từ cả variant và màu sắc
-3. Tất cả thông tin sản phẩm cần thiết cho đơn hàng được lưu trữ cùng với đơn hàng tại thời điểm tạo, bao gồm:
-   - Chi tiết sản phẩm
-   - Thông số kỹ thuật của variant
-   - Thông tin màu sắc
-   - Chi tiết giá cả
-4. Phí vận chuyển hiện được đặt miễn phí (0 VNĐ) cho tất cả đơn hàng.
-5. Khi không tìm thấy variant hoặc màu, hệ thống sẽ tự động sử dụng mục đầu tiên có sẵn và đưa ra cảnh báo trong phản hồi.
-6. Đơn hàng có thể được tìm kiếm bằng cả MongoDB ObjectId hoặc số đơn hàng duy nhất (định dạng TS-YYYYMMDD-XXX).
-7. Hủy đơn hàng được thực hiện dưới dạng xóa mềm (thay đổi trạng thái thành 'cancelled') thay vì xóa bản ghi khỏi cơ sở dữ liệu. 
+When errors occur, the API will return an appropriate HTTP status code and error details:
+
+```json
+{
+  "success": false,
+  "message": "Error message",
+  "errors": ["Error details"]
+}
+```
+
+Common error codes:
+- 400: Bad Request - Invalid parameters
+- 404: Not Found - Resource not found
+- 500: Server Error - Unexpected server error
+
+## Examples of Using the API
+
+### Example 1: Get Monthly Revenue for a Specific Year
+
+```
+GET /api/revenue/statistics?period=monthly&year=2023
+```
+
+### Example 2: Get Revenue for a Custom Date Range
+
+```
+GET /api/revenue/statistics?period=custom&start_date=2023-01-01&end_date=2023-03-31
+```
+
+### Example 3: Get Revenue by Product for the Current Month
+
+```
+GET /api/revenue/by-product?period=monthly
+```
+
+## Visualization Tips
+
+The data from these APIs can be effectively visualized using:
+
+1. **Line charts** for trend analysis over time periods
+2. **Bar charts** for comparing revenue across products 
+3. **Pie charts** for showing product revenue distribution
+4. **KPI cards** for displaying summary metrics
+5. **Heat maps** for showing daily/weekly sales patterns
+
+## Future Enhancements
+
+Planned future enhancements to the Revenue API include:
+
+1. Advanced filtering by product categories
+2. Geographical revenue breakdowns
+3. Customer segment analysis
+4. Forecast and predictive revenue analytics
+5. Export capabilities (CSV, Excel, PDF) 

@@ -19,8 +19,8 @@ export const routes: Routes = [
         loadChildren: () => import('./features/order-placement/order-placement.module').then(m => m.OrderPlacementModule)
       },
       {
-        path: 'order-management',
-        loadChildren: () => import('./features/order-management/order-management.module').then(m => m.OrderManagementModule)
+        path: 'contact-management',
+        loadChildren: () => import('./features/contact-management/contact-management.module').then(m => m.ContactManagementModule)
       },
       {
         path: 'category-management',

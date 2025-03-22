@@ -1,15 +1,18 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 
 import { RevenueReportRoutingModule } from './revenue-report-routing.module';
-import { RevenueDashboardComponent } from './revenue-dashboard/revenue-dashboard.component';
 
 @NgModule({
   declarations: [],
   imports: [
     CommonModule,
-    RevenueReportRoutingModule,
-    RevenueDashboardComponent
+    FormsModule,
+    ReactiveFormsModule,
+    HttpClientModule,
+    RevenueReportRoutingModule
   ]
 })
 export class RevenueReportModule { }
