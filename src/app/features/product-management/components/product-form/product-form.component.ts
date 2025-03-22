@@ -100,7 +100,11 @@ export class ProductFormComponent implements OnInit {
   videoPreviewUrls: string[] = [];
   errorMessage = '';
   autoCalculatedDiscount = 0;
-
+  selectedColorIndex: number | null = null;
+  selectedVariantIndex: number | null = null;
+  finalPrice = 0;
+  variantBasePrice = 0;
+  
   // Files for upload
   thumbnailFile: File | null = null;
   imageFiles: File[] = [];
@@ -153,6 +157,16 @@ export class ProductFormComponent implements OnInit {
     this.productForm.get('discount_percent')?.valueChanges.subscribe(percent => {
       this.calculateDiscountPrice();
     });
+    
+    // Listen for changes to the colors array
+    this.productForm.get('colors')?.valueChanges.subscribe(() => {
+      this.calculateFinalPrice();
+    });
+    
+    // Listen for changes to the variant_specs array
+    this.productForm.get('variant_specs')?.valueChanges.subscribe(() => {
+      this.calculateFinalPrice();
+    });
   }
 
   ngOnInit(): void {
@@ -167,6 +181,12 @@ export class ProductFormComponent implements OnInit {
     if (this.highlightsArray.length === 0) {
       this.addHighlight();
     }
+    
+    // Calculate initial prices after a short delay to ensure form is fully initialized
+    setTimeout(() => {
+      this.calculateDiscountPrice();
+      this.calculateFinalPrice();
+    }, 100);
   }
 
   // Calculate the discounted price
@@ -182,6 +202,9 @@ export class ProductFormComponent implements OnInit {
       this.autoCalculatedDiscount = price;
       this.productForm.get('discount_price')?.setValue(price);
     }
+    
+    // Recalculate final price whenever discount changes
+    this.calculateFinalPrice();
   }
 
   // Format price in VND
@@ -362,6 +385,11 @@ export class ProductFormComponent implements OnInit {
         
         this.variantSpecsArray.push(variantSpecGroup);
       });
+      
+      // Subscribe to variant price changes for all variants
+      for (let i = 0; i < this.variantSpecsArray.length; i++) {
+        this.subscribeToVariantPriceChanges(i);
+      }
     }
 
     // Add colors
@@ -376,6 +404,11 @@ export class ProductFormComponent implements OnInit {
         });
         
         this.colorsArray.push(colorGroup);
+        
+        // Subscribe to color adjustment changes for all colors
+        for (let i = 0; i < this.colorsArray.length; i++) {
+          this.subscribeToColorAdjustmentChanges(i);
+        }
       });
     }
 
@@ -424,6 +457,7 @@ export class ProductFormComponent implements OnInit {
     });
 
     this.calculateDiscountPrice();
+    this.calculateFinalPrice();
 
     // Load thumbnail preview if available
     if (product.thumbnail) {
@@ -725,12 +759,24 @@ export class ProductFormComponent implements OnInit {
     });
     
     this.variantSpecsArray.push(variantSpecGroup);
+    
+    // Subscribe to variant price changes
+    const lastIndex = this.variantSpecsArray.length - 1;
+    this.subscribeToVariantPriceChanges(lastIndex);
   }
 
   removeVariantSpec(index: number): void {
     this.variantSpecsArray.removeAt(index);
+    
+    // If the removed variant was selected, reset selection
+    if (this.selectedVariantIndex === index) {
+      this.selectVariant(null);
+    } else if (this.selectedVariantIndex !== null && this.selectedVariantIndex > index) {
+      // Adjust selected index if a variant before it was removed
+      this.selectedVariantIndex--;
+    }
   }
-
+  
   getVariantSpecPortsArray(index: number): FormArray {
     return (this.variantSpecsArray.at(index).get('specs') as FormGroup).get('ports') as FormArray;
   }
@@ -745,6 +791,23 @@ export class ProductFormComponent implements OnInit {
       portsArray.removeAt(portIndex);
     }
   }
+  
+  // Subscribe to variant price changes
+  subscribeToVariantPriceChanges(variantIndex: number): void {
+    const variantControl = this.variantSpecsArray.at(variantIndex);
+    
+    variantControl.get('price')?.valueChanges.subscribe(() => {
+      if (this.selectedVariantIndex === variantIndex) {
+        this.calculateFinalPrice();
+      }
+    });
+    
+    variantControl.get('discount_percent')?.valueChanges.subscribe(() => {
+      if (this.selectedVariantIndex === variantIndex) {
+        this.calculateFinalPrice();
+      }
+    });
+  }
 
   // Methods for colors
   addColor(): void {
@@ -757,10 +820,136 @@ export class ProductFormComponent implements OnInit {
     });
     
     this.colorsArray.push(colorGroup);
+    
+    // Subscribe to color adjustment changes
+    const lastIndex = this.colorsArray.length - 1;
+    this.subscribeToColorAdjustmentChanges(lastIndex);
   }
 
   removeColor(index: number): void {
     this.colorsArray.removeAt(index);
+    
+    // If the removed color was selected, reset selection
+    if (this.selectedColorIndex === index) {
+      this.selectColor(null);
+    } else if (this.selectedColorIndex !== null && this.selectedColorIndex > index) {
+      // Adjust selected index if a color before it was removed
+      this.selectedColorIndex--;
+    }
+  }
+  
+  // Methods for color price calculations
+  subscribeToColorAdjustmentChanges(colorIndex: number): void {
+    const colorControl = this.colorsArray.at(colorIndex);
+    
+    colorControl.get('price_adjustment')?.valueChanges.subscribe(() => {
+      if (this.selectedColorIndex === colorIndex) {
+        this.calculateFinalPrice();
+      }
+    });
+    
+    colorControl.get('discount_adjustment')?.valueChanges.subscribe(() => {
+      if (this.selectedColorIndex === colorIndex) {
+        this.calculateFinalPrice();
+      }
+    });
+  }
+  
+  // Select a color for price calculation display
+  selectColor(index: number | null): void {
+    this.selectedColorIndex = index;
+    this.calculateFinalPrice();
+  }
+  
+  // Calculate the final price with all adjustments
+  calculateFinalPrice(): void {
+    // Start with the base price - either variant price or product price
+    let finalPrice = 0;
+    let basePrice = this.productForm.get('price')?.value || 0;
+    let discountPercent = this.productForm.get('discount_percent')?.value || 0;
+    
+    // If a variant is selected, use its price and discount instead
+    if (this.selectedVariantIndex !== null && this.variantSpecsArray.length > this.selectedVariantIndex) {
+      const selectedVariant = this.variantSpecsArray.at(this.selectedVariantIndex);
+      basePrice = selectedVariant.get('price')?.value || basePrice;
+      discountPercent = selectedVariant.get('discount_percent')?.value || discountPercent;
+      
+      // Calculate the variant's discounted price
+      const variantDiscountAmount = (basePrice * discountPercent) / 100;
+      finalPrice = Math.round(basePrice - variantDiscountAmount);
+      this.variantBasePrice = finalPrice;
+    } else {
+      // Use the main product's discounted price
+      finalPrice = this.autoCalculatedDiscount || basePrice;
+      this.variantBasePrice = 0;
+    }
+    
+    // Apply color adjustments if a color is selected
+    if (this.selectedColorIndex !== null && this.colorsArray.length > this.selectedColorIndex) {
+      const selectedColor = this.colorsArray.at(this.selectedColorIndex);
+      const priceAdjustment = selectedColor.get('price_adjustment')?.value || 0;
+      const discountAdjustment = selectedColor.get('discount_adjustment')?.value || 0;
+      
+      // Add price adjustment
+      finalPrice += priceAdjustment;
+      
+      // Apply additional discount if any
+      if (discountAdjustment > 0) {
+        const additionalDiscount = (finalPrice * discountAdjustment) / 100;
+        finalPrice = Math.round(finalPrice - additionalDiscount);
+      }
+    }
+    
+    this.finalPrice = finalPrice;
+  }
+  
+  // Select a variant for price calculation display
+  selectVariant(index: number | null): void {
+    this.selectedVariantIndex = index;
+    this.calculateFinalPrice();
+  }
+  
+  // Get the selected variant name
+  getSelectedVariantName(): string | null {
+    if (this.selectedVariantIndex === null || this.variantSpecsArray.length <= this.selectedVariantIndex) {
+      return null;
+    }
+    
+    return this.variantSpecsArray.at(this.selectedVariantIndex).get('name')?.value || null;
+  }
+  
+  // Get variant price information
+  getVariantPrice(): number {
+    if (this.selectedVariantIndex === null || this.variantSpecsArray.length <= this.selectedVariantIndex) {
+      return 0;
+    }
+    
+    return this.variantSpecsArray.at(this.selectedVariantIndex).get('price')?.value || 0;
+  }
+  
+  getVariantDiscountPercent(): number {
+    if (this.selectedVariantIndex === null || this.variantSpecsArray.length <= this.selectedVariantIndex) {
+      return 0;
+    }
+    
+    return this.variantSpecsArray.at(this.selectedVariantIndex).get('discount_percent')?.value || 0;
+  }
+  
+  getVariantSavedAmount(): number {
+    if (this.selectedVariantIndex === null || this.variantSpecsArray.length <= this.selectedVariantIndex) {
+      return 0;
+    }
+    
+    const variant = this.variantSpecsArray.at(this.selectedVariantIndex);
+    const price = variant.get('price')?.value || 0;
+    const discountPercent = variant.get('discount_percent')?.value || 0;
+    
+    if (price && discountPercent) {
+      const discountAmount = (price * discountPercent) / 100;
+      return Math.round(discountAmount);
+    }
+    
+    return 0;
   }
 
   // Methods for product info
@@ -795,7 +984,7 @@ export class ProductFormComponent implements OnInit {
 
   handleImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bMQ0AIAwAwQJ+ZuFnBt5hYeJxN3DptGa27ae7I/Y+DnCDIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZk/aCYQAWAEEFwAAAAASUVORK5CYII=';
+    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bMQ0AIAwAwQJ+ZuFnBt5hYeJxN3DptGa27ae7I/Y+DnCDIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhGSGZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIRkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZkhmSEZIZk/aCYQAWAEEFwAAAAASUVORK5CYII=';
     
     // Add a tooltip or text to indicate the file is missing
     const parent = img.parentElement;
@@ -844,6 +1033,62 @@ export class ProductFormComponent implements OnInit {
       
       // Log to console for debugging
       console.warn('GridFS video file not found', video.querySelector('source')?.src);
+    }
+  }
+
+  // Get the selected color name
+  getSelectedColorName(): string | null {
+    if (this.selectedColorIndex === null || this.colorsArray.length <= this.selectedColorIndex) {
+      return null;
+    }
+    
+    return this.colorsArray.at(this.selectedColorIndex).get('name')?.value || null;
+  }
+  
+  // Get color adjustment information
+  getColorPriceAdjustment(): number {
+    if (this.selectedColorIndex === null || this.colorsArray.length <= this.selectedColorIndex) {
+      return 0;
+    }
+    
+    return this.colorsArray.at(this.selectedColorIndex).get('price_adjustment')?.value || 0;
+  }
+  
+  getColorDiscountAdjustment(): number {
+    if (this.selectedColorIndex === null || this.colorsArray.length <= this.selectedColorIndex) {
+      return 0;
+    }
+    
+    return this.colorsArray.at(this.selectedColorIndex).get('discount_adjustment')?.value || 0;
+  }
+
+  removeImage(index: number): void {
+    const imagesValue = this.productForm.get('images')?.value || [];
+    if (index >= 0 && index < imagesValue.length) {
+      imagesValue.splice(index, 1);
+      this.productForm.get('images')?.setValue(imagesValue);
+    }
+  }
+
+  removePreviewImage(index: number): void {
+    if (index >= 0 && index < this.imagePreviewUrls.length) {
+      this.imagePreviewUrls.splice(index, 1);
+      this.imageFiles.splice(index, 1);
+    }
+  }
+
+  removeVideo(index: number): void {
+    const videosValue = this.productForm.get('videos')?.value || [];
+    if (index >= 0 && index < videosValue.length) {
+      videosValue.splice(index, 1);
+      this.productForm.get('videos')?.setValue(videosValue);
+    }
+  }
+
+  removePreviewVideo(index: number): void {
+    if (index >= 0 && index < this.videoPreviewUrls.length) {
+      this.videoPreviewUrls.splice(index, 1);
+      this.videoFiles.splice(index, 1);
     }
   }
 } 

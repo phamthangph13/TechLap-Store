@@ -92,6 +92,147 @@
               </div>
             </div>
           </div>
+          
+          <!-- Overall Price Summary Card -->
+          <div class="overall-price-summary" *ngIf="productForm.get('price')?.value > 0">
+            <h3>Bảng tính toán giá sản phẩm</h3>
+            <p class="summary-description">Xem trước cách tính giá sản phẩm theo các cấu hình và màu sắc</p>
+            <div class="price-summary-card">
+              <div class="price-summary-section">
+                <div class="price-item">
+                  <span class="price-label">Giá gốc:</span>
+                  <span class="price-value">{{ formatPrice(productForm.get('price')?.value) }}</span>
+                </div>
+                
+                <div class="price-item" *ngIf="productForm.get('discount_percent')?.value > 0">
+                  <span class="price-label">Giảm giá sản phẩm:</span>
+                  <span class="price-value discount">-{{ formatPrice(getSavedAmount()) }}</span>
+                </div>
+                
+                <div class="price-item">
+                  <span class="price-label">Giá sau giảm:</span>
+                  <span class="price-value" [class.discounted]="productForm.get('discount_percent')?.value > 0">
+                    {{ formatPrice(autoCalculatedDiscount) }}
+                  </span>
+                </div>
+              </div>
+              
+              <!-- Variant selection for price calculation -->
+              <div class="variant-selection-section" *ngIf="variantSpecsArray.length > 0">
+                <h4>Chọn phiên bản sản phẩm</h4>
+                <div class="variant-selection">
+                  <div 
+                    *ngFor="let variantControl of variantSpecsArray.controls; let variantIndex = index" 
+                    class="variant-option" 
+                    [class.selected]="selectedVariantIndex === variantIndex"
+                    (click)="selectVariant(variantIndex)">
+                    <div class="variant-card-mini">
+                      <span class="variant-name">{{ $any(variantControl).get('name')?.value }}</span>
+                      <div class="variant-price-row">
+                        <span class="variant-price">{{ formatPrice($any(variantControl).get('price')?.value) }}</span>
+                        <span class="price-difference" 
+                              *ngIf="$any(variantControl).get('price')?.value != productForm.get('price')?.value"
+                              [class.higher]="$any(variantControl).get('price')?.value > productForm.get('price')?.value"
+                              [class.lower]="$any(variantControl).get('price')?.value < productForm.get('price')?.value">
+                          {{ $any(variantControl).get('price')?.value > productForm.get('price')?.value ? '+' : '' }}
+                          {{ formatPrice($any(variantControl).get('price')?.value - productForm.get('price')?.value) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    class="clear-selection" 
+                    *ngIf="selectedVariantIndex !== null"
+                    (click)="selectVariant(null)">
+                    Chọn cấu hình mặc định
+                  </button>
+                </div>
+                
+                <div class="selected-variant-info" *ngIf="selectedVariantIndex !== null">
+                  <div class="variant-info-header">
+                    <span class="selected-variant-name">Phiên bản: {{ getSelectedVariantName() }}</span>
+                  </div>
+                  
+                  <div class="price-item">
+                    <span class="price-label">Giá phiên bản:</span>
+                    <span class="price-value">{{ formatPrice(getVariantPrice()) }}</span>
+                  </div>
+                  
+                  <div class="price-item" *ngIf="getVariantDiscountPercent() > 0">
+                    <span class="price-label">Giảm giá phiên bản:</span>
+                    <span class="price-value discount">-{{ getVariantDiscountPercent() }}% ({{ formatPrice(getVariantSavedAmount()) }})</span>
+                  </div>
+                  
+                  <div class="price-item">
+                    <span class="price-label">Giá sau giảm:</span>
+                    <span class="price-value discounted">{{ formatPrice(variantBasePrice) }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Color selection for price calculation -->
+              <div class="color-selection-section" *ngIf="colorsArray.length > 0">
+                <h4>Điều chỉnh giá theo màu sắc</h4>
+                <div class="color-selection">
+                  <button 
+                    *ngFor="let colorControl of colorsArray.controls; let colorIndex = index" 
+                    type="button" 
+                    class="color-option" 
+                    [style.background-color]="$any(colorControl).get('code')?.value"
+                    [class.selected]="selectedColorIndex === colorIndex"
+                    (click)="selectColor(colorIndex)"
+                    [title]="$any(colorControl).get('name')?.value">
+                  </button>
+                  <button 
+                    type="button" 
+                    class="clear-selection" 
+                    *ngIf="selectedColorIndex !== null"
+                    (click)="selectColor(null)">
+                    Xóa lựa chọn
+                  </button>
+                </div>
+                
+                <div class="selected-color-info" *ngIf="selectedColorIndex !== null">
+                  <div class="color-info-header">
+                    <span class="selected-color-name">Màu: {{ getSelectedColorName() }}</span>
+                  </div>
+                  
+                  <div class="price-item" *ngIf="getColorPriceAdjustment() !== 0">
+                    <span class="price-label">Điều chỉnh giá màu:</span>
+                    <span class="price-value" [class.additional]="getColorPriceAdjustment() > 0" [class.discount]="getColorPriceAdjustment() < 0">
+                      {{ getColorPriceAdjustment() > 0 ? '+' : '' }}{{ formatPrice(getColorPriceAdjustment()) }}
+                    </span>
+                  </div>
+                  
+                  <div class="price-item" *ngIf="getColorDiscountAdjustment() > 0">
+                    <span class="price-label">Giảm giá thêm theo màu:</span>
+                    <span class="price-value discount">-{{ getColorDiscountAdjustment() }}%</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Final price calculation -->
+              <div class="final-price-section">
+                <div class="price-item total">
+                  <span class="price-label">Tổng cộng:</span>
+                  <span class="price-value final">{{ formatPrice(finalPrice) }}</span>
+                </div>
+                
+                <div class="price-explanation" *ngIf="selectedVariantIndex !== null || selectedColorIndex !== null">
+                  <p *ngIf="selectedVariantIndex !== null && selectedColorIndex !== null">
+                    *Giá đã bao gồm phiên bản {{ getSelectedVariantName() }} và màu {{ getSelectedColorName() }}
+                  </p>
+                  <p *ngIf="selectedVariantIndex !== null && selectedColorIndex === null">
+                    *Giá đã áp dụng cho phiên bản {{ getSelectedVariantName() }}
+                  </p>
+                  <p *ngIf="selectedVariantIndex === null && selectedColorIndex !== null">
+                    *Giá đã bao gồm điều chỉnh theo màu {{ getSelectedColorName() }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="form-row">
             <div class="form-group">
@@ -219,7 +360,7 @@
         <div class="form-section section-media">
           <h3>Hình ảnh & Video</h3>
           
-          <div class="file-input-container">
+          <div class="file-input-container" [class.has-single-file]="isEditMode && productForm.get('thumbnail')?.value || !isEditMode && thumbnailPreview">
             <label for="thumbnail">Ảnh đại diện</label>
             <div class="file-input-wrapper">
               <input type="file" id="thumbnail" accept="image/*" (change)="onThumbnailChange($event)" class="file-input">
@@ -233,45 +374,77 @@
             </div>
           </div>
 
-          <div class="file-input-container">
+          <div class="file-input-container" [class.has-single-file]="isEditMode && productForm.get('images')?.value?.length === 1 || !isEditMode && imagePreviewUrls.length === 1">
             <label for="images">Hình ảnh sản phẩm</label>
             <div class="file-input-wrapper">
               <input type="file" id="images" accept="image/*" multiple (change)="onImagesChange($event)" class="file-input">
               <label for="images" class="file-select-btn">Chọn hình ảnh sản phẩm</label>
             </div>
+            
             <div class="image-container" *ngIf="isEditMode && productForm.get('images')?.value?.length">
-              <div *ngFor="let imageId of productForm.get('images')?.value" class="gallery-item">
+              <div *ngFor="let imageId of productForm.get('images')?.value; let i = index" class="gallery-item">
                 <img [src]="productService.getProductFileUrl(imageId)" (error)="handleImageError($event)" alt="Product Image">
+                <div class="gallery-item-actions">
+                  <button type="button" title="Xóa ảnh" (click)="removeImage(i)">✕</button>
+                </div>
+              </div>
+              
+              <div class="upload-preview-count" *ngIf="productForm.get('images')?.value?.length > 0">
+                {{ productForm.get('images')?.value?.length }} hình ảnh
               </div>
             </div>
+            
             <div class="image-container" *ngIf="!isEditMode && imagePreviewUrls.length">
-              <div *ngFor="let imgUrl of imagePreviewUrls" class="gallery-item">
+              <div *ngFor="let imgUrl of imagePreviewUrls; let i = index" class="gallery-item">
                 <img [src]="imgUrl" alt="Xem trước hình ảnh sản phẩm">
+                <div class="gallery-item-actions">
+                  <button type="button" title="Xóa ảnh" (click)="removePreviewImage(i)">✕</button>
+                </div>
+              </div>
+              
+              <div class="upload-preview-count" *ngIf="imagePreviewUrls.length > 0">
+                {{ imagePreviewUrls.length }} hình ảnh
               </div>
             </div>
           </div>
 
-          <div class="file-input-container">
+          <div class="file-input-container" [class.has-single-file]="isEditMode && productForm.get('videos')?.value?.length === 1 || !isEditMode && videoPreviewUrls.length === 1">
             <label for="videos">Video sản phẩm</label>
             <div class="file-input-wrapper">
               <input type="file" id="videos" accept="video/*" multiple (change)="onVideosChange($event)" class="file-input">
               <label for="videos" class="file-select-btn">Chọn video sản phẩm</label>
             </div>
+            
             <div class="video-container" *ngIf="isEditMode && productForm.get('videos')?.value?.length">
-              <div *ngFor="let videoId of productForm.get('videos')?.value" class="video-item">
-                <video controls width="320" preload="metadata" (error)="handleVideoError($event)">
+              <div *ngFor="let videoId of productForm.get('videos')?.value; let i = index" class="video-item">
+                <video controls preload="metadata" (error)="handleVideoError($event)">
                   <source [src]="productService.getProductFileUrl(videoId)" type="video/mp4">
                   Your browser does not support the video tag.
                 </video>
+                <div class="video-item-actions">
+                  <button type="button" title="Xóa video" (click)="removeVideo(i)">✕</button>
+                </div>
+              </div>
+              
+              <div class="upload-preview-count" *ngIf="productForm.get('videos')?.value?.length > 0">
+                {{ productForm.get('videos')?.value?.length }} video
               </div>
             </div>
+            
             <div class="video-container" *ngIf="!isEditMode && videoPreviewUrls.length">
-              <div *ngFor="let videoUrl of videoPreviewUrls" class="video-item">
-                <video controls width="320" *ngIf="isVideoFile(videoUrl)">
+              <div *ngFor="let videoUrl of videoPreviewUrls; let i = index" class="video-item">
+                <video controls *ngIf="isVideoFile(videoUrl)">
                   <source [src]="videoUrl" type="video/mp4">
                   Your browser does not support the video tag.
                 </video>
                 <div class="video-placeholder" *ngIf="!isVideoFile(videoUrl)">{{videoUrl}}</div>
+                <div class="video-item-actions">
+                  <button type="button" title="Xóa video" (click)="removePreviewVideo(i)">✕</button>
+                </div>
+              </div>
+              
+              <div class="upload-preview-count" *ngIf="videoPreviewUrls.length > 0">
+                {{ videoPreviewUrls.length }} video
               </div>
             </div>
           </div>
