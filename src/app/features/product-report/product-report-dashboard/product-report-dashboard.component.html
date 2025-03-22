@@ -1,4 +1,377 @@
 <div class="container-fluid">
   <h2 class="page-title">Báo cáo thống kê sản phẩm</h2>
-  <p>Trang đang phát triển...</p>
+
+  <div class="api-status-banner" *ngIf="!apiAvailable">
+    <div class="alert alert-warning">
+      <strong>Chú ý:</strong> API thống kê sản phẩm hiện không khả dụng. Dữ liệu hiển thị là dữ liệu mẫu.
+    </div>
+  </div>
+
+  <!-- Period selection controls -->
+  <div class="period-controls">
+    <mat-form-field appearance="fill">
+      <mat-label>Chọn khoảng thời gian</mat-label>
+      <mat-select [(ngModel)]="selectedPeriod" (selectionChange)="onPeriodChange()">
+        <mat-option *ngFor="let period of periods" [value]="period.value">
+          {{ period.label }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <ng-container *ngIf="selectedPeriod === 'custom'">
+      <mat-form-field appearance="fill">
+        <mat-label>Từ ngày</mat-label>
+        <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate">
+        <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Đến ngày</mat-label>
+        <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate">
+        <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="applyDateFilter()">Áp dụng</button>
+    </ng-container>
+  </div>
+
+  <!-- Statistics Tabs -->
+  <mat-tab-group>
+    <!-- Top Selling Products Tab -->
+    <mat-tab label="Top sản phẩm bán chạy">
+      <div class="tab-content">
+        <div class="loading-container" *ngIf="isLoadingTopSelling">
+          <mat-spinner [diameter]="40"></mat-spinner>
+        </div>
+
+        <ng-container *ngIf="!isLoadingTopSelling">
+          <div class="row">
+            <div class="col-md-6">
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Top sản phẩm bán chạy nhất</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <table mat-table [dataSource]="topSellingProducts" class="mat-elevation-z8">
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                      <th mat-header-cell *matHeaderCellDef> Tên sản phẩm </th>
+                      <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>
+
+                    <!-- Brand Column -->
+                    <ng-container matColumnDef="brand">
+                      <th mat-header-cell *matHeaderCellDef> Thương hiệu </th>
+                      <td mat-cell *matCellDef="let element"> {{element.brand}} </td>
+                    </ng-container>
+
+                    <!-- Total Sales Column -->
+                    <ng-container matColumnDef="total_sales">
+                      <th mat-header-cell *matHeaderCellDef> Số lượng bán </th>
+                      <td mat-cell *matCellDef="let element"> {{element.total_sales}} </td>
+                    </ng-container>
+
+                    <!-- Total Revenue Column -->
+                    <ng-container matColumnDef="total_revenue">
+                      <th mat-header-cell *matHeaderCellDef> Doanh thu </th>
+                      <td mat-cell *matCellDef="let element"> {{formatCurrency(element.total_revenue)}} </td>
+                    </ng-container>
+
+                    <!-- Current Stock Column -->
+                    <ng-container matColumnDef="current_stock">
+                      <th mat-header-cell *matHeaderCellDef> Tồn kho </th>
+                      <td mat-cell *matCellDef="let element"> {{element.current_stock}} </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="topSellingColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: topSellingColumns;"></tr>
+                  </table>
+                </mat-card-content>
+              </mat-card>
+            </div>
+            <div class="col-md-6">
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Biểu đồ sản phẩm bán chạy</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <ngx-charts-bar-vertical
+                    [view]="view"
+                    [results]="salesChartData"
+                    [gradient]="gradient"
+                    [xAxis]="showXAxis"
+                    [yAxis]="showYAxis"
+                    [legend]="showLegend"
+                    [showXAxisLabel]="showXAxisLabel"
+                    [showYAxisLabel]="showYAxisLabel"
+                    [xAxisLabel]="xAxisLabel"
+                    [yAxisLabel]="yAxisLabel">
+                  </ngx-charts-bar-vertical>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </mat-tab>
+
+    <!-- Category Statistics Tab -->
+    <mat-tab label="Thống kê theo danh mục">
+      <div class="tab-content">
+        <div class="loading-container" *ngIf="isLoadingCategories">
+          <mat-spinner [diameter]="40"></mat-spinner>
+        </div>
+
+        <ng-container *ngIf="!isLoadingCategories">
+          <div class="row">
+            <div class="col-md-6">
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Thống kê theo danh mục</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <table mat-table [dataSource]="categoryStatistics" class="mat-elevation-z8">
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                      <th mat-header-cell *matHeaderCellDef> Tên danh mục </th>
+                      <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>
+
+                    <!-- Total Products Column -->
+                    <ng-container matColumnDef="total_products">
+                      <th mat-header-cell *matHeaderCellDef> Tổng sản phẩm </th>
+                      <td mat-cell *matCellDef="let element"> {{element.total_products}} </td>
+                    </ng-container>
+
+                    <!-- Total Sales Column -->
+                    <ng-container matColumnDef="total_sales">
+                      <th mat-header-cell *matHeaderCellDef> Số lượng bán </th>
+                      <td mat-cell *matCellDef="let element"> {{element.total_sales}} </td>
+                    </ng-container>
+
+                    <!-- Total Revenue Column -->
+                    <ng-container matColumnDef="total_revenue">
+                      <th mat-header-cell *matHeaderCellDef> Doanh thu </th>
+                      <td mat-cell *matCellDef="let element"> {{formatCurrency(element.total_revenue)}} </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="categoryColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: categoryColumns;"></tr>
+                  </table>
+                </mat-card-content>
+              </mat-card>
+            </div>
+            <div class="col-md-6">
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Biểu đồ doanh số theo danh mục</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <ngx-charts-pie-chart
+                    [view]="view"
+                    [results]="categoryChartData"
+                    [gradient]="gradient"
+                    [legend]="showLegend"
+                    [labels]="true">
+                  </ngx-charts-pie-chart>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </mat-tab>
+
+    <!-- Inventory Status Tab -->
+    <mat-tab label="Tình trạng tồn kho">
+      <div class="tab-content">
+        <div class="loading-container" *ngIf="isLoadingInventory">
+          <mat-spinner [diameter]="40"></mat-spinner>
+        </div>
+
+        <ng-container *ngIf="!isLoadingInventory && inventoryStatus">
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <mat-card appearance="outlined" class="inventory-stat-card">
+                <mat-card-header>
+                  <mat-card-title>Tổng sản phẩm</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="stat-value">{{inventoryStatus.summary.total_products}}</div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+            <div class="col-md-3">
+              <mat-card appearance="outlined" class="inventory-stat-card">
+                <mat-card-header>
+                  <mat-card-title>Tổng giá trị</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="stat-value">{{formatCurrency(inventoryStatus.summary.total_value)}}</div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+            <div class="col-md-3">
+              <mat-card appearance="outlined" class="inventory-stat-card">
+                <mat-card-header>
+                  <mat-card-title>Hàng sắp hết</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="stat-value">{{inventoryStatus.summary.low_stock_count}}</div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+            <div class="col-md-3">
+              <mat-card appearance="outlined" class="inventory-stat-card">
+                <mat-card-header>
+                  <mat-card-title>Hàng hết</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="stat-value">{{inventoryStatus.summary.out_of_stock_count}}</div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Sản phẩm sắp hết hàng</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <table mat-table [dataSource]="inventoryStatus.low_stock_products" class="mat-elevation-z8">
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                      <th mat-header-cell *matHeaderCellDef> Tên sản phẩm </th>
+                      <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>
+
+                    <!-- Brand Column -->
+                    <ng-container matColumnDef="brand">
+                      <th mat-header-cell *matHeaderCellDef> Thương hiệu </th>
+                      <td mat-cell *matCellDef="let element"> {{element.brand}} </td>
+                    </ng-container>
+
+                    <!-- Current Stock Column -->
+                    <ng-container matColumnDef="current_stock">
+                      <th mat-header-cell *matHeaderCellDef> Tồn kho </th>
+                      <td mat-cell *matCellDef="let element"> {{element.current_stock}} </td>
+                    </ng-container>
+
+                    <!-- Status Column -->
+                    <ng-container matColumnDef="status">
+                      <th mat-header-cell *matHeaderCellDef> Trạng thái </th>
+                      <td mat-cell *matCellDef="let element"> {{element.status}} </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="inventoryColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: inventoryColumns;"></tr>
+                  </table>
+                </mat-card-content>
+              </mat-card>
+            </div>
+            <div class="col-md-6">
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Sản phẩm hết hàng</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <table mat-table [dataSource]="inventoryStatus.out_of_stock_products" class="mat-elevation-z8">
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                      <th mat-header-cell *matHeaderCellDef> Tên sản phẩm </th>
+                      <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>
+
+                    <!-- Brand Column -->
+                    <ng-container matColumnDef="brand">
+                      <th mat-header-cell *matHeaderCellDef> Thương hiệu </th>
+                      <td mat-cell *matCellDef="let element"> {{element.brand}} </td>
+                    </ng-container>
+
+                    <!-- Current Stock Column -->
+                    <ng-container matColumnDef="current_stock">
+                      <th mat-header-cell *matHeaderCellDef> Tồn kho </th>
+                      <td mat-cell *matCellDef="let element"> {{element.current_stock}} </td>
+                    </ng-container>
+
+                    <!-- Status Column -->
+                    <ng-container matColumnDef="status">
+                      <th mat-header-cell *matHeaderCellDef> Trạng thái </th>
+                      <td mat-cell *matCellDef="let element"> {{element.status}} </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="inventoryColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: inventoryColumns;"></tr>
+                  </table>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </mat-tab>
+
+    <!-- Sales Trends Tab -->
+    <mat-tab label="Xu hướng bán hàng">
+      <div class="tab-content">
+        <div class="loading-container" *ngIf="isLoadingSalesTrends">
+          <mat-spinner [diameter]="40"></mat-spinner>
+        </div>
+
+        <ng-container *ngIf="!isLoadingSalesTrends && salesTrends.length > 0">
+          <div class="row">
+            <div class="col-md-12">
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Xu hướng bán hàng theo thời gian</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <table mat-table [dataSource]="salesTrends" class="mat-elevation-z8">
+                    <!-- Period Column -->
+                    <ng-container matColumnDef="period">
+                      <th mat-header-cell *matHeaderCellDef> Kỳ </th>
+                      <td mat-cell *matCellDef="let element"> {{element.period}} </td>
+                    </ng-container>
+
+                    <!-- Products Column - Expandable with details -->
+                    <ng-container matColumnDef="products">
+                      <th mat-header-cell *matHeaderCellDef> Sản phẩm bán chạy nhất </th>
+                      <td mat-cell *matCellDef="let element"> 
+                        <div *ngIf="element.products.length > 0">
+                          {{element.products[0].name}} - SL: {{element.products[0].quantity}}
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Total Quantity Column -->
+                    <ng-container matColumnDef="total_quantity">
+                      <th mat-header-cell *matHeaderCellDef> Tổng SL </th>
+                      <td mat-cell *matCellDef="let element"> 
+                        {{calculateTotalQuantity(element)}}
+                      </td>
+                    </ng-container>
+
+                    <!-- Total Revenue Column -->
+                    <ng-container matColumnDef="total_revenue">
+                      <th mat-header-cell *matHeaderCellDef> Tổng doanh thu </th>
+                      <td mat-cell *matCellDef="let element"> 
+                        {{formatCurrency(calculateTotalRevenue(element))}}
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="salesTrendsColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: salesTrendsColumns;"></tr>
+                  </table>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>
