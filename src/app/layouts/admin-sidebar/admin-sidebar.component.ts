@@ -17,7 +17,6 @@ interface MenuItem {
 })
 export class AdminSidebarComponent {
   menuItems: MenuItem[] = [
-    { label: 'Dashboard', icon: 'fa-tachometer-alt', route: '/admin/dashboard' },
     { label: 'Quản lý đặt hàng', icon: 'fa-shopping-cart', route: '/admin/order-placement' },
     { label: 'Quản lý liên hệ', icon: 'fa-address-book', route: '/admin/contact-management' },
     { label: 'Quản lý danh mục sản phẩm', icon: 'fa-folder', route: '/admin/category-management' },

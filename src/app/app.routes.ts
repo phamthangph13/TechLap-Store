@@ -11,10 +11,6 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
-        path: 'dashboard',
-        loadChildren: () => import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
-      },
-      {
         path: 'order-placement',
         loadChildren: () => import('./features/order-placement/order-placement.module').then(m => m.OrderPlacementModule)
       },
